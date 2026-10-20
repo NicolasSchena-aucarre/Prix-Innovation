@@ -6,18 +6,18 @@
 (function () {
   'use strict';
 
-  // Nombre de cartes par page : 9 = 3 colonnes × 3 lignes. Les photos sont chargées en taille d'origine
-  // (l'API de Grist ne fournit pas de vignettes) : une valeur plus basse allège les pages.
-  var PAR_PAGE = 9;
-
-  // Vidéos affichées d'emblée dans la fenêtre de détail, sans bouton intermédiaire.
-  // Réservé aux hôtes que vous maîtrisez : un service tiers (YouTube, Vimeo, un PeerTube extérieur…) reçoit l'adresse IP
-  // du visiteur dès que son lecteur est inséré. Par défaut, seul l'hôte qui sert le widget est concerné.
-  // Pour ajouter votre propre serveur de vidéos ou votre PeerTube : var HOTES_SANS_CLIC = [location.hostname, 'videos.exemple.gouv.fr'];
-  var HOTES_SANS_CLIC = [location.hostname];
-
   var $ = function (s, r) { return (r || document).querySelector(s); };
   var esc = Socle.echapper;
+
+  // Réglages : tout se règle dans js/config.js. Un réglage invalide est signalé ici, avec son explication.
+  var CFG;
+  try { CFG = Socle.config(); }
+  catch (e) {
+    $('#liste').innerHTML = '<div class="fr-alert fr-alert--info"><h3 class="fr-alert__title">Widget mal configuré</h3><p>' + esc(e.message) + '</p></div>';
+    return;
+  }
+  // Le lecteur d'une vidéo s'affiche d'emblée seulement si son hôte est celui du widget ou figure dans config.js.
+  var HOTES_SANS_CLIC = [location.hostname].concat(CFG.hotesSansClic);
   var acc = new Socle.AccesPieces();
   var etat = { q: '', balise: '', page: 1 };
   var projets = [], tri = [], res = [], minuteur, avertiPhotos = false;
@@ -45,9 +45,9 @@
   }
 
   // ---------- outils ----------
-  function nombre(n) { return n.toLocaleString('fr-FR'); }
+  function nombre(n) { return n.toLocaleString(CFG.langue); }
   function pluriel(n, mot) { return nombre(n) + ' ' + mot + (n > 1 ? 's' : ''); }
-  function hote(url) { try { return new URL(url).hostname.replace(/^www\./, ''); } catch (e) { return ''; } }
+  function hote(url) { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; } }
   function nomLecteur(v) {
     if (v.type === 'youtube') return 'YouTube (mode sans cookies)';
     if (v.type === 'vimeo') return 'Vimeo';
@@ -82,7 +82,7 @@
   var observateur = ('IntersectionObserver' in window)
     ? new IntersectionObserver(function (entrees) {
         entrees.forEach(function (e) { if (e.isIntersecting) { observateur.unobserve(e.target); charger(e.target); } });
-      }, { rootMargin: '200px' })
+      }, { rootMargin: CFG.margeImagesPx + 'px' })
     : null;
 
   function lierImages(racine, immediat) {
@@ -146,9 +146,9 @@
 
   function executer() {
     res = Socle.filtrer(tri, { texte: etat.q, balise: etat.balise }, true);
-    var pages = Math.max(1, Math.ceil(res.length / PAR_PAGE));
+    var pages = Math.max(1, Math.ceil(res.length / CFG.parPage));
     if (etat.page > pages) etat.page = pages;
-    var tranche = res.slice((etat.page - 1) * PAR_PAGE, etat.page * PAR_PAGE);
+    var tranche = res.slice((etat.page - 1) * CFG.parPage, etat.page * CFG.parPage);
     var actif = etat.q.trim() || etat.balise;
 
     el.compteur.innerHTML = '<strong>' + pluriel(res.length, 'projet') + '</strong> sur ' + nombre(projets.length) + ' · du plus récent au plus ancien';
@@ -264,7 +264,7 @@
     zone.addEventListener('touchend', function (e) {
       if (x0 === null) return;
       var dx = e.changedTouches[0].clientX - x0;
-      if (Math.abs(dx) > 40) aller(dx < 0 ? 1 : -1);
+      if (Math.abs(dx) > CFG.seuilBalayagePx) aller(dx < 0 ? 1 : -1);
       x0 = null;
     });
   }
@@ -290,7 +290,7 @@
   }
 
   // ---------- événements ----------
-  el.q.addEventListener('input', function () { clearTimeout(minuteur); minuteur = setTimeout(function () { etat.q = el.q.value; etat.page = 1; executer(); }, 200); });
+  el.q.addEventListener('input', function () { clearTimeout(minuteur); minuteur = setTimeout(function () { etat.q = el.q.value; etat.page = 1; executer(); }, CFG.delaiSaisieMs); });
   $('#recherche').addEventListener('submit', function (e) { e.preventDefault(); clearTimeout(minuteur); etat.q = el.q.value; etat.page = 1; executer(); });
   el.balise.addEventListener('change', function () { etat.balise = el.balise.value; etat.page = 1; executer(); });
   el.reinit.addEventListener('click', reinitialiser);
@@ -338,11 +338,11 @@
   }
 
   Socle.demarrer({
-    acces: 'full',   // nécessaire pour obtenir le jeton qui permet d'afficher les photos (voir test-photos.html)
     onMappage: function (manquantes) {
       el.compteur.textContent = '';
-      el.liste.innerHTML = '<div class="fr-alert fr-alert--info"><h3 class="fr-alert__title">Widget à configurer</h3><p>Associez les colonnes obligatoires dans le panneau de configuration du widget : ' +
-        manquantes.map(function (c) { return esc(c.title); }).join(', ') + '.</p></div>';
+      el.liste.innerHTML = '<div class="fr-alert fr-alert--info"><h3 class="fr-alert__title">Widget à configurer</h3><p>Colonnes obligatoires introuvables : ' +
+        manquantes.map(function (c) { return esc(c.title) + ' (nom attendu : « ' + esc(CFG.colonnes[c.name] || c.name) + ' »)'; }).join(', ') +
+        '. Renommez-les dans Grist, associez-les dans le panneau de configuration du widget, ou adaptez js/config.js.</p></div>';
     },
     onProjets: recevoir
   });

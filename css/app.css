@@ -20,9 +20,6 @@ body { margin: 0; background: var(--background-default-grey); color: var(--text-
 .app-compteur strong { color: var(--text-title-grey); }
 .app-avis { margin-bottom: 1rem; }
 .app-avis .fr-alert { max-width: 40rem; }
-.app-avis .fr-alert + .fr-alert { margin-top: 1rem; }
-.app-avis .fr-btn { margin-top: .5rem; }
-.app-chargement { margin: 2rem 0; color: var(--text-mention-grey); }
 
 /* grille de cartes */
 .app-cartes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.5rem; margin: 0; padding: 0; }
@@ -88,8 +85,7 @@ body { margin: 0; background: var(--background-default-grey); color: var(--text-
   .app-dialog { width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; }
   .app-dialog[open] { display: flex; flex-direction: column; }
   .app-dialog__tete, .app-dialog__pied { flex: none; }
-  .app-dialog__corps { flex: 1 0 auto; }
-  .app-dialog__corps { padding: .5rem 1rem 1rem; }
+  .app-dialog__corps { flex: 1 0 auto; padding: .5rem 1rem 1rem; }
   .app-dialog__pied { padding: .75rem 1rem; }
   .app-dialog__pied .app-libelle { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 }

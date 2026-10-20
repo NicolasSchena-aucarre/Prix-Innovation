@@ -8,6 +8,7 @@ Widget personnalisé Grist en lecture seule, conforme au Système de Design de l
 |---|---|
 | `index.html` | Le widget à ajouter dans Grist |
 | `js/widget.js` | Recherche, filtre, pagination, fenêtre de détail |
+| `js/config.js` | **Tous les réglages** (accès, cartes par page, colonnes, vidéos sans clic…) |
 | `js/socle.js` | Lecture de la table, nettoyage des valeurs, accès aux pièces jointes |
 | `css/app.css` | Mise en page propre au widget (grille, fenêtre de détail) |
 | `dsfr/` | Fichiers officiels du DSFR 1.15.4, **non modifiés** (CSS, 4 polices Marianne, 9 icônes, 2 pictogrammes) |
@@ -24,7 +25,9 @@ Widget personnalisé Grist en lecture seule, conforme au Système de Design de l
 ## Configuration dans Grist
 
 - **Accès : « accès complet »**. Grist ne délivre le jeton d'accès aux pièces jointes qu'à ce niveau. Le widget n'écrit jamais dans le document ; un visiteur anonyme ne peut lire que ce que les règles d'accès (ACL) lui permettent.
-- **Colonnes à associer** (panneau de configuration du widget) :
+- **Colonnes** : le widget cherche dans la table les colonnes dont le nom est prévu dans `js/config.js` (par défaut `Titre`, `Description`, `Balise`, `DateAjout`, `Photos`, `Couverture`, `Videos`, `Transcription`), sans tenir compte des accents, de la casse, des espaces ni des tirets bas. Si vos colonnes portent d'autres noms, changez la valeur correspondante dans `config.js`, ou associez-les à la main dans le panneau de configuration de Grist : une association manuelle est toujours prioritaire. La page `verif-socle.html` indique, pour chaque colonne, celle qui a été trouvée et comment.
+- **Table** : un widget personnalisé doit toujours être rattaché à une table dans Grist (choix de la table à l'ajout du widget). Pour ne pas refaire ce réglage à chaque document, enregistrer un document modèle contenant la page et le widget déjà configurés, et le copier.
+- **Colonnes attendues** :
 
 | Colonne attendue | Type Grist | |
 |---|---|---|
@@ -45,8 +48,9 @@ Widget personnalisé Grist en lecture seule, conforme au Système de Design de l
 
 ## Réglages
 
-- **Cartes par page** : constante `PAR_PAGE` en tête de `js/widget.js` (9 par défaut). Les photos sont chargées en taille d'origine, car l'API de Grist ne fournit pas de vignettes : une valeur plus basse allège les pages.
-- **Interface de programmation de Grist** : `index.html` charge `grist-plugin-api.js` depuis `docs.getgrist.com`. Pour éviter tout appel extérieur, remplacer l'adresse par celle de votre instance (`https://votre-instance/grist-plugin-api.js`).
+Tous les réglages sont dans `js/config.js`, commentés un par un : niveau d'accès, nombre de cartes par page, hôtes dont les vidéos s'affichent sans clic, noms des colonnes, délais techniques. Un réglage invalide est signalé dans le widget par un message explicite.
+
+Un seul réglage est ailleurs : l'adresse de l'interface de programmation de Grist, dans `index.html` (et dans les deux pages de diagnostic). Pour éviter tout appel à un domaine extérieur, remplacer `https://docs.getgrist.com/grist-plugin-api.js` par `https://votre-instance/grist-plugin-api.js`.
 
 ## Publication (GitHub Pages)
 
