@@ -6,18 +6,46 @@
   <title>Mon espace</title>
   <style>
     :root {
-      --haut: 53px;
+      /* Zone de Grist à masquer (en px) : à ajuster si l'interface change */
+      --haut: 53px;    /* titre de la vue + icônes filtre / menu */
       --bas: 25px;
-      --gauche: 26px;
-      --droite: 26px;
+      --gauche: 26px;  /* bordure verte */
+      --droite: 26px;  /* si la barre de défilement est rognée, essayer 10px */
+
+      /* Marge de protection autour du contenu (0 sur grand écran) */
+      --marge: 0px;
+      --marge-haut: 0px;
     }
-    html, body { margin: 0; height: 100%; }
+
+    /* Petits écrans : on remet une marge pour que le contenu ne touche pas les bords */
+    @media (max-width: 700px) {
+      :root {
+        --marge: 16px;
+        --marge-haut: 24px;
+      }
+    }
+
+    html, body {
+      margin: 0;
+      height: 100%;
+      overflow: hidden;
+      background: #fff;
+    }
+
     .cadre {
+      box-sizing: border-box;
+      height: 100vh;  /* repli pour les navigateurs anciens */
+      height: 100dvh; /* hauteur réelle sur mobile */
+      padding: var(--marge-haut) var(--marge) 0;
+    }
+
+    .fenetre {
       position: relative;
-      height: 100vh;
+      height: 100%;
       overflow: hidden;
     }
-    .cadre iframe {
+
+    .fenetre iframe {
       position: absolute;
       top: calc(-1 * var(--haut));
       left: calc(-1 * var(--gauche));
@@ -29,11 +57,13 @@
 </head>
 <body>
   <div class="cadre">
-    <iframe id="cadre-grist" title="Mon espace"></iframe>
+    <div class="fenetre">
+      <iframe id="cadre-grist" title="Mon espace"></iframe>
+    </div>
+  </div>
 <script>
   document.getElementById('cadre-grist').src =
     atob('aHR0cHM6Ly9ncmlzdC5hdWNhcnJlLnRlY2gvby9kb2NzL3BCTHJpajRHUW1BUy9Qcml4LWRlLWxpbm5vdmF0aW9uL3AvND9lbWJlZD10cnVl');
 </script>
-  </div>
 </body>
 </html>
