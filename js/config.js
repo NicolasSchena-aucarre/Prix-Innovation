@@ -8,7 +8,7 @@
 window.CONFIG_PROJETS = {
 
   // Niveau d'accès demandé à Grist. « full » est nécessaire pour obtenir le jeton qui permet d'afficher
-  // les photos (pièces jointes) et pour reconnaître les colonnes sans association manuelle.
+  // les photos (pièces jointes) et pour lire toutes les colonnes de la table sans rien associer.
   // Le widget ne modifie jamais le document, quel que soit ce niveau.
   acces: 'full',
 
@@ -22,21 +22,6 @@ window.CONFIG_PROJETS = {
   // (YouTube, Vimeo, un PeerTube extérieur…) reçoit l'adresse IP du visiteur dès que son lecteur est inséré.
   // Exemple : ['videos.exemple.gouv.fr']
   hotesSansClic: [],
-
-  // Colonnes de la table : à gauche, le rôle de la colonne dans le widget (ne pas modifier) ;
-  // à droite, le nom de la colonne dans Grist (sans tenir compte des accents, de la casse, des espaces ni des tirets bas).
-  // Si les colonnes de votre table portent d'autres noms, changez uniquement la valeur de droite.
-  // Une association faite à la main dans le panneau de configuration de Grist reste toujours prioritaire.
-  colonnes: {
-    Titre: 'Titre',
-    Description: 'Description',
-    Balise: 'Balise',
-    DateAjout: 'DateAjout',
-    Photos: 'Photos',
-    Couverture: 'Couverture',
-    Videos: 'Videos',
-    Transcription: 'Transcription'
-  },
 
   // Langue et fuseau horaire utilisés pour afficher les dates et les nombres.
   langue: 'fr-FR',

@@ -120,7 +120,7 @@
 
   // ---------- cartes ----------
   function carte(p) {
-    var cid = p.couverture[0] || p.photos[0], badge = libelleMedias(p);
+    var cid = p.photos[0], badge = libelleMedias(p);
     var image;
     if (cid) image = '<img class="fr-responsive-img app-img" alt="" data-piece="' + cid + '">';
     else image = '<div class="app-neutre" aria-hidden="true">' + pictogramme(videosValides(p).length ? 'video' : 'pictures') + '</div>';
@@ -232,16 +232,15 @@
     var p = res[cur];
     if (!p) { el.dlg.close(); return; }
     var m = medias(p), it = m[diapo];
-    var transcription = (it && it.k === 'video' && p.transcription)
-      ? '<details class="app-transcription"><summary>Transcription de la vidéo</summary><p>' + esc(p.transcription) + '</p></details>' : '';
     var lienVideo = (it && it.k === 'video' && it.v.type !== 'lien')
       ? '<p class="fr-text--sm app-lien-video"><a class="fr-link fr-link--sm" href="' + esc(it.v.url) + '" target="_blank" rel="noopener noreferrer" title="Ouvrir la vidéo ' + it.n + ' sur ' + esc(nomSite(it.v)) + ' - nouvelle fenêtre">Ouvrir la vidéo sur ' + esc(nomSite(it.v)) + '</a></p>' : '';
-    el.corps.innerHTML = '<div class="app-galerie">' + scene(p, m) + lienVideo + transcription + '</div>' +
+    el.corps.innerHTML = '<div class="app-galerie">' + scene(p, m) + lienVideo + '</div>' +
       '<div class="app-info">' +
         (p.balises.length ? '<ul class="fr-tags-group">' + p.balises.map(function (b) { return '<li><p class="fr-tag">' + esc(b) + '</p></li>'; }).join('') + '</ul>' : '') +
         '<h2 class="fr-h4" id="m-titre">' + esc(p.titre || 'Projet sans titre') + '</h2>' +
         (p.date ? '<p class="fr-text--xs app-date">Ajouté le ' + esc(Socle.formaterDate(p.date)) + '</p>' : '') +
         (p.description ? '<p class="app-desc">' + esc(p.description) + '</p>' : '') +
+        (p.champs.length ? '<dl class="app-champs">' + p.champs.map(function (c) { return '<div><dt>' + esc(c.label) + '</dt><dd>' + esc(c.valeur) + '</dd></div>'; }).join('') + '</dl>' : '') +
       '</div>';
     el.prec.innerHTML = ICONE.gauche + '<span class="app-libelle">Projet précédent</span>';
     el.suiv.innerHTML = '<span class="app-libelle">Projet suivant</span>' + ICONE.droite;
@@ -325,8 +324,11 @@
   });
 
   // ---------- données ----------
-  function recevoir(liste) {
+  function recevoir(liste, info) {
     var idOuvert = (el.dlg.open && res[cur]) ? res[cur].id : null;
+    // Le libellé du filtre est celui de la colonne des balises dans la table.
+    var colBalise = info && info.structure && info.structure.roles.balise;
+    if (colBalise) $('label[for="balise"]').textContent = colBalise.label;
     projets = liste;
     tri = Socle.trierParDate(projets);
     majBalises();
@@ -338,12 +340,10 @@
   }
 
   Socle.demarrer({
-    onMappage: function (manquantes) {
+    onProjets: recevoir,
+    onErreur: function (message) {
       el.compteur.textContent = '';
-      el.liste.innerHTML = '<div class="fr-alert fr-alert--info"><h3 class="fr-alert__title">Widget à configurer</h3><p>Colonnes obligatoires introuvables : ' +
-        manquantes.map(function (c) { return esc(c.title) + ' (nom attendu : « ' + esc(CFG.colonnes[c.name] || c.name) + ' »)'; }).join(', ') +
-        '. Renommez-les dans Grist, associez-les dans le panneau de configuration du widget, ou adaptez js/config.js.</p></div>';
-    },
-    onProjets: recevoir
+      el.liste.innerHTML = '<div class="fr-alert fr-alert--info"><h3 class="fr-alert__title">Table non exploitable</h3><p>' + esc(message) + '</p></div>';
+    }
   });
 })();
