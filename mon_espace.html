@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mon espace</title>
+  <style>
+    :root {
+      --haut: 53px;
+      --bas: 25px;
+      --gauche: 26px;
+      --droite: 26px;
+    }
+    html, body { margin: 0; height: 100%; }
+    .cadre {
+      position: relative;
+      height: 100vh;
+      overflow: hidden;
+    }
+    .cadre iframe {
+      position: absolute;
+      top: calc(-1 * var(--haut));
+      left: calc(-1 * var(--gauche));
+      width: calc(100% + var(--gauche) + var(--droite));
+      height: calc(100% + var(--haut) + var(--bas));
+      border: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="cadre">
+    <iframe
+      src="https://grist.aucarre.tech/o/docs/pBLrij4GQmAS/Prix-de-linnovation/p/2?embed=true"
+      title="Mon espace">
+    </iframe>
+  </div>
+</body>
+</html>
