@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Projets</title>
+<!-- Système de Design de l'État (fichiers officiels non modifiés) -->
+<link rel="stylesheet" href="dsfr/core/core.min.css">
+<link rel="stylesheet" href="dsfr/component/form/form.min.css">
+<link rel="stylesheet" href="dsfr/component/input/input.min.css">
+<link rel="stylesheet" href="dsfr/component/select/select.min.css">
+<link rel="stylesheet" href="dsfr/component/search/search.min.css">
+<link rel="stylesheet" href="dsfr/component/button/button.min.css">
+<link rel="stylesheet" href="dsfr/component/link/link.min.css">
+<link rel="stylesheet" href="dsfr/component/card/card.min.css">
+<link rel="stylesheet" href="dsfr/component/badge/badge.min.css">
+<link rel="stylesheet" href="dsfr/component/tag/tag.min.css">
+<link rel="stylesheet" href="dsfr/component/pagination/pagination.min.css">
+<link rel="stylesheet" href="dsfr/component/alert/alert.min.css">
+<link rel="stylesheet" href="dsfr/component/skiplink/skiplink.min.css">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+
+<div class="fr-skiplinks">
+  <nav role="navigation" aria-label="Accès rapide" class="fr-container">
+    <ul class="fr-skiplinks__list">
+      <li><a class="fr-link" href="#q">Recherche</a></li>
+      <li><a class="fr-link" href="#liste">Résultats</a></li>
+    </ul>
+  </nav>
+</div>
+
+<main id="w" class="app">
+  <h2 class="fr-h3 app-titre">Projets</h2>
+
+  <div class="app-barre">
+    <form id="recherche" role="search">
+      <div class="fr-search-bar fr-search-bar--labelled">
+        <label class="fr-label" for="q">Rechercher un projet<span class="fr-hint-text">Dans le titre et la description, plusieurs mots possibles</span></label>
+        <input class="fr-input" type="search" id="q" name="q" autocomplete="off" placeholder="Ex. : école énergie">
+        <button type="submit" class="fr-btn" title="Rechercher">Rechercher</button>
+      </div>
+    </form>
+    <div class="fr-select-group app-champ-balise" id="groupe-balise">
+      <label class="fr-label" for="balise">Balise</label>
+      <select class="fr-select" id="balise" name="balise"></select>
+    </div>
+  </div>
+
+  <div class="app-statut">
+    <p class="fr-text--sm app-compteur" id="compteur" aria-live="polite">Chargement des projets…</p>
+    <button type="button" class="fr-btn fr-btn--tertiary fr-btn--sm" id="reinit" hidden>Réinitialiser les filtres</button>
+  </div>
+
+  <div class="app-avis" id="avis"></div>
+  <div id="liste" tabindex="-1"></div>
+  <nav role="navigation" class="fr-pagination" aria-label="Pagination" id="pagination" hidden></nav>
+</main>
+
+<dialog id="detail" class="app-dialog" aria-labelledby="m-titre">
+  <div class="app-dialog__tete">
+    <button type="button" class="fr-btn--close fr-btn" id="m-fermer" title="Fermer la fenêtre">Fermer</button>
+  </div>
+  <div class="app-dialog__corps" id="m-corps"></div>
+  <div class="app-dialog__pied">
+    <button type="button" class="fr-btn fr-btn--tertiary fr-btn--sm" id="m-prec"></button>
+    <span class="app-pos" id="m-pos" aria-live="polite"></span>
+    <button type="button" class="fr-btn fr-btn--tertiary fr-btn--sm" id="m-suiv"></button>
+  </div>
+</dialog>
+
+<!-- Interface de programmation de Grist.
+     Pour éviter tout appel à un domaine extérieur, remplacez cette adresse par celle de votre instance :
+     https://votre-instance-grist/grist-plugin-api.js -->
+<script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+<script src="js/socle.js"></script>
+<script src="js/widget.js"></script>
+</body>
+</html>

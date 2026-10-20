@@ -1,0 +1,7 @@
+Système de Design de l'État (DSFR) - version 1.15.4
+Fichiers officiels copiés SANS MODIFICATION depuis le paquet npm @gouvfr/dsfr (dossier dist/).
+Licence : Etalab 2.0 (voir LICENSE.md). Usage soumis aux conditions du DSFR :
+réservé aux sites et applications des services de l'État et de leurs opérateurs.
+Les polices Marianne ont leurs propres conditions d'utilisation (info.gouv.fr).
+Seuls les fichiers utiles à ce widget sont conservés ; l'arborescence est celle du paquet d'origine,
+car les feuilles de style référencent les polices et les icônes par des chemins relatifs.

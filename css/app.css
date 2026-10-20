@@ -1,0 +1,95 @@
+/* Mise en page propre au widget « Projets » (maquette A).
+   Les composants (carte, recherche, liste déroulante, tag, badge, bouton, pagination, alerte)
+   viennent du DSFR, utilisé sans modification dans le dossier dsfr/. */
+
+html { font-family: Marianne, arial, sans-serif; }
+body { margin: 0; background: var(--background-default-grey); color: var(--text-default-grey); }
+[hidden] { display: none !important; }
+
+.app { max-width: 78rem; margin: 0 auto; padding: 1.5rem 1.5rem 3rem; }
+.app-titre { margin: 0 0 1.5rem; }
+
+/* bandeau de filtres */
+.app-barre { display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; align-items: end; padding-bottom: 1.5rem; border-bottom: 1px solid var(--border-default-grey); }
+.app-barre .fr-select-group { margin-bottom: 0; }
+.app-barre .fr-search-bar { margin: 0; }
+.app-barre:has(> .app-champ-balise[hidden]) { grid-template-columns: 1fr; }
+
+.app-statut { display: flex; justify-content: space-between; align-items: center; gap: 1rem; min-height: 3.5rem; margin: .5rem 0 1rem; }
+.app-compteur { margin: 0; }
+.app-compteur strong { color: var(--text-title-grey); }
+.app-avis { margin-bottom: 1rem; }
+.app-avis .fr-alert { max-width: 40rem; }
+.app-avis .fr-alert + .fr-alert { margin-top: 1rem; }
+.app-avis .fr-btn { margin-top: .5rem; }
+.app-chargement { margin: 2rem 0; color: var(--text-mention-grey); }
+
+/* grille de cartes */
+.app-cartes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.5rem; margin: 0; padding: 0; }
+.app-cartes > li { display: flex; padding: 0; margin: 0; }
+.app-cartes .fr-card { width: 100%; }
+.fr-card .fr-card__title button { padding: 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+/* Description limitée à 2 lignes ; flex: none empêche la carte (en colonne flexible) d'écraser le paragraphe. */
+.fr-card .fr-card__desc { flex: 0 0 auto; max-height: 3rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.app-img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; background: var(--background-contrast-grey); }
+/* Vignette par défaut : fond bleu très clair et pictogramme officiel du DSFR. */
+.app-neutre { display: grid; place-items: center; width: 100%; aspect-ratio: 16 / 9; background: var(--background-alt-blue-france); }
+.app-pictogramme { width: 7rem; height: 7rem; }
+.app-ico { width: 1rem; height: 1rem; fill: currentColor; flex: none; }
+.app-echec { margin: 0; padding: 1rem; text-align: center; font-size: .875rem; color: var(--text-mention-grey); }
+
+#pagination { margin-top: 3rem; }
+#pagination .fr-pagination__list { justify-content: center; }
+
+@media (max-width: 61.99em) { .app-cartes { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 47.99em) {
+  .app { padding: 1rem; }
+  .app-barre { grid-template-columns: 1fr; gap: 1rem; }
+  .app-cartes { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* fenêtre de détail (boîte de dialogue native : focus piégé, fermeture par Échap) */
+.app-dialog { width: min(55rem, calc(100% - 2rem)); max-height: calc(100% - 2rem); padding: 0; border: 0; overflow: auto; background: var(--background-default-grey); color: var(--text-default-grey); }
+.app-dialog::backdrop { background: rgba(22, 22, 22, .64); }
+.app-dialog__tete { display: flex; padding: 1rem 1rem 0; }
+.app-dialog__corps { padding: .5rem 2rem 1.5rem; }
+.app-dialog__pied { position: sticky; bottom: 0; display: flex; align-items: center; justify-content: space-between; gap: .5rem; padding: 1rem 2rem; border-top: 1px solid var(--border-default-grey); background: var(--background-default-grey); }
+.app-dialog__pied .fr-btn { gap: .5rem; }
+.app-pos { font-size: .875rem; color: var(--text-mention-grey); }
+
+.app-scene { position: relative; display: grid; place-items: center; aspect-ratio: 16 / 9; overflow: hidden; background: var(--background-alt-grey); }
+/* Les médias occupent tout le cadre 16/9 de la scène (position absolue : un pourcentage de hauteur n'est pas fiable ici). */
+.app-scene > img, .app-scene > iframe, .app-scene > video, .app-scene > .app-video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+.app-scene > img { display: block; object-fit: contain; }
+.app-scene > iframe, .app-scene > video { border: 0; background: #000; }
+/* Projet sans média : bandeau avec le pictogramme par défaut (au lieu d'une fenêtre sans visuel). */
+.app-scene--vide { aspect-ratio: auto; min-height: 11rem; background: var(--background-alt-blue-france); }
+
+.app-nav { position: absolute; top: 50%; transform: translateY(-50%); display: grid; place-items: center; width: 2.5rem; height: 2.5rem; border: 0; background: var(--background-default-grey); color: var(--text-action-high-blue-france); box-shadow: 0 0 0 1px var(--border-default-grey); cursor: pointer; z-index: 2; }
+.app-nav:hover { background: var(--background-open-blue-france); }
+.app-nav--g { left: .5rem; } .app-nav--d { right: .5rem; }
+.app-diapo { position: absolute; right: .5rem; bottom: .5rem; padding: 0 .5rem; background: var(--background-default-grey); color: var(--text-default-grey); font-size: .75rem; line-height: 1.25rem; z-index: 2; }
+.app-video { display: grid; place-items: center; gap: 1rem; align-content: center; padding: 1rem; text-align: center; background: var(--background-alt-blue-france); }
+.app-video p { margin: 0; font-size: .75rem; color: var(--text-mention-grey); }
+.app-video .app-erreur { font-size: 1rem; color: var(--text-default-grey); max-width: 32rem; }
+.app-lien-video { margin: .5rem 0 0; }
+.app-lecture { gap: .5rem; }
+.app-lecture .app-ico { width: 1.25rem; height: 1.25rem; }
+.app-transcription { margin-top: .5rem; font-size: .875rem; }
+.app-transcription summary { color: var(--text-action-high-blue-france); cursor: pointer; }
+.app-transcription p { margin: .5rem 0 0; white-space: pre-line; }
+
+.app-info { margin-top: 1.5rem; }
+.app-info h2 { margin: 1rem 0 .25rem; }
+.app-date { margin: 0 0 1rem; color: var(--text-mention-grey); }
+.app-desc { margin: 0; white-space: pre-line; }
+
+@media (max-width: 47.99em) {
+  .app-dialog { width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; }
+  .app-dialog[open] { display: flex; flex-direction: column; }
+  .app-dialog__tete, .app-dialog__pied { flex: none; }
+  .app-dialog__corps { flex: 1 0 auto; }
+  .app-dialog__corps { padding: .5rem 1rem 1rem; }
+  .app-dialog__pied { padding: .75rem 1rem; }
+  .app-dialog__pied .app-libelle { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}
