@@ -1,7 +1,8 @@
 /*
- * Widget « Projets » : liste de cartes avec recherche, filtre par balise, pagination
- * et fenêtre de détail (galerie photo, vidéos hébergées à l'extérieur).
- * S'appuie sur js/socle.js pour la lecture de la table et l'accès aux pièces jointes.
+ * Widget « Projets » (maquette B) : liste de cartes horizontales avec recherche, filtre par thème, pagination
+ * et fenêtre de détail (illustration, vidéos hébergées à l'extérieur, documents joints).
+ * S'appuie sur js/socle.js pour la lecture de la table et l'accès aux pièces jointes. Les colonnes utilisées
+ * sont déclarées dans la section « colonnes » de js/config.js.
  */
 (function () {
   'use strict';
@@ -19,11 +20,15 @@
   // Le lecteur d'une vidéo s'affiche d'emblée seulement si son hôte est celui du widget ou figure dans config.js.
   var HOTES_SANS_CLIC = [location.hostname].concat(CFG.hotesSansClic);
   var acc = new Socle.AccesPieces();
-  var etat = { q: '', balise: '', page: 1 };
+  var etat = { q: '', theme: '', page: 1 };
   var projets = [], tri = [], res = [], minuteur, avertiPhotos = false;
+  var LIB = {};      // libellés des colonnes porteur, contact, précisions et tags, lus dans la table
+  var metas = {};    // documents joints : numéro de pièce jointe -> { nom, taille }
+  // Une image sans adresse n'est pas du HTML valide : en attendant son chargement (à la demande), elle porte une image vide intégrée.
+  var VIDE = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
 
   var el = {
-    q: $('#q'), balise: $('#balise'), groupeBalise: $('#groupe-balise'), compteur: $('#compteur'), reinit: $('#reinit'),
+    q: $('#q'), theme: $('#theme'), groupeTheme: $('#groupe-theme'), compteur: $('#compteur'), reinit: $('#reinit'),
     avis: $('#avis'), liste: $('#liste'), pagination: $('#pagination'), dlg: $('#detail'),
     corps: $('#m-corps'), prec: $('#m-prec'), suiv: $('#m-suiv'), pos: $('#m-pos')
   };
@@ -35,14 +40,6 @@
     droite: svg('M13.17 12 8.22 7.05l1.41-1.41L16 12l-6.37 6.36-1.41-1.41z'),
     lecture: svg('M8 5v14l11-7z')
   };
-
-  // Pictogramme officiel du DSFR (fichiers dans dsfr/artwork) : « video » pour un projet qui n'a que de la vidéo,
-  // « pictures » pour un projet sans aucun média.
-  function pictogramme(nom) {
-    var src = 'dsfr/artwork/pictograms/leisure/' + nom + '.svg';
-    return '<svg class="fr-artwork app-pictogramme" aria-hidden="true" viewBox="0 0 80 80" width="80" height="80">' +
-      ['decorative', 'minor', 'major'].map(function (c) { return '<use class="fr-artwork-' + c + '" href="' + src + '#artwork-' + c + '"></use>'; }).join('') + '</svg>';
-  }
 
   // ---------- outils ----------
   function nombre(n) { return n.toLocaleString(CFG.langue); }
@@ -64,15 +61,9 @@
   }
   function nomSite(v) { return v.type === 'youtube' ? 'YouTube' : v.type === 'vimeo' ? 'Vimeo' : hote(v.url); }
   function videosValides(p) { return p.videos.filter(function (v) { return v.type !== 'invalide'; }); }
-  function libelleMedias(p) {
-    var a = [], v = videosValides(p).length;
-    if (p.photos.length) a.push(pluriel(p.photos.length, 'photo'));
-    if (v) a.push(pluriel(v, 'vidéo'));
-    return a.join(' · ');
-  }
-  // Diapositives de la galerie : photos d'abord, puis vidéos.
+  // Diapositives de la galerie : illustrations d'abord, puis vidéos.
   function medias(p) {
-    var m = p.photos.map(function (id) { return { k: 'photo', id: id }; });
+    var m = p.illustrations.map(function (id) { return { k: 'photo', id: id }; });
     videosValides(p).forEach(function (v, i) { m.push({ k: 'video', v: v, n: i + 1 }); });
     return m;
   }
@@ -96,10 +87,13 @@
   function echec(img) {
     avertirPhotosIndisponibles();
     var scene = img.closest('.app-scene');
-    if (scene) { scene.innerHTML = '<p class="app-echec">Cette photo n’a pas pu être chargée pour le moment.</p>'; return; }
-    var neutre = document.createElement('div');
-    neutre.className = 'app-neutre'; neutre.setAttribute('aria-hidden', 'true');
-    img.parentNode.replaceChild(neutre, img);
+    if (scene) { scene.innerHTML = '<p class="app-echec">Cette illustration n’a pas pu être chargée pour le moment.</p>'; return; }
+    // Dans une carte, une illustration absente laisse la place aux tags du projet (ou à rien s'il n'en a pas).
+    var entete = img.closest('.fr-card__header');
+    if (!entete) return;
+    var p = projets.filter(function (x) { return x.id === +img.getAttribute('data-projet'); })[0];
+    if (p && p.tags.length) entete.innerHTML = '<div class="fr-card__img">' + panneauTags(p) + '</div>';
+    else entete.parentNode.removeChild(entete);
   }
   // Une image peut échouer parce que le jeton a expiré : un seul nouvel essai avec un jeton neuf.
   document.addEventListener('error', function (e) {
@@ -115,53 +109,98 @@
   function avertirPhotosIndisponibles() {
     if (avertiPhotos) return;
     avertiPhotos = true;
-    el.avis.insertAdjacentHTML('beforeend', '<div class="fr-alert fr-alert--info fr-alert--sm" role="status"><p>Les photos ne peuvent pas être affichées pour le moment.</p></div>');
+    el.avis.insertAdjacentHTML('beforeend', '<div class="fr-alert fr-alert--info fr-alert--sm" role="status"><p>Les illustrations ne peuvent pas être affichées pour le moment.</p></div>');
+  }
+
+  // ---------- documents joints (colonne des précisions) ----------
+  function tailleLisible(octets) {
+    if (!(octets > 0)) return '';
+    return octets >= 1048576 ? (octets / 1048576).toLocaleString(CFG.langue, { maximumFractionDigits: 1 }) + ' Mo' : Math.max(1, Math.round(octets / 1024)).toLocaleString(CFG.langue) + ' Ko';
+  }
+  function habillerDocument(a, m) {
+    a.textContent = m.nom;
+    a.setAttribute('title', m.nom + ' - nouvelle fenêtre');
+    var ext = m.nom.indexOf('.') > 0 ? m.nom.split('.').pop() : '';
+    var infos = [ext && ext.length <= 5 ? ext.toUpperCase() : '', tailleLisible(m.taille)].filter(Boolean).join(' – ');
+    var suite = a.nextElementSibling;
+    if (suite) suite.textContent = infos;
+  }
+  // Nom, type et poids de chaque document : on les demande à Grist sans redessiner la fenêtre. Si Grist ne répond pas,
+  // le lien « Document N » reste utilisable.
+  function chargerDocuments(racine) {
+    racine.querySelectorAll('a[data-doc]').forEach(function (a) {
+      var id = a.getAttribute('data-doc');
+      acc.obtenir().then(function () {
+        a.setAttribute('href', acc.url(id));
+        if (metas[id]) return metas[id];
+        return fetch(acc.urlMeta(id)).then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
+          metas[id] = j && j.fileName ? { nom: String(j.fileName), taille: Number(j.fileSize) || 0 } : null;
+          return metas[id];
+        });
+      }).then(function (m) { if (m) habillerDocument(a, m); }).catch(function () {});
+    });
   }
 
   // ---------- cartes ----------
+  function tag(t, classe) { return '<li><p class="fr-tag' + (classe ? ' ' + classe : '') + '">' + esc(t) + '</p></li>'; }
+  // Panneau des tags : il tient la place de l'illustration quand le projet n'en a pas.
+  function panneauTags(p) { return '<div class="app-tags"><ul class="app-tags__liste">' + p.tags.map(function (t) { return tag(t); }).join('') + '</ul></div>'; }
+
   function carte(p) {
-    var cid = p.photos[0], badge = libelleMedias(p);
-    var image;
-    if (cid) image = '<img class="fr-responsive-img app-img" alt="" data-piece="' + cid + '">';
-    else image = '<div class="app-neutre" aria-hidden="true">' + pictogramme(videosValides(p).length ? 'video' : 'pictures') + '</div>';
-    var tags = p.balises.length
-      ? '<div class="fr-card__start"><ul class="fr-tags-group">' + p.balises.map(function (b) { return '<li><p class="fr-tag fr-tag--sm">' + esc(b) + '</p></li>'; }).join('') + '</ul></div>' : '';
-    return '<li><div class="fr-card fr-enlarge-button"><div class="fr-card__body"><div class="fr-card__content">' +
+    var visuel = p.illustrations.length
+      ? '<img class="fr-responsive-img app-img" alt="" src="' + VIDE + '" data-piece="' + p.illustrations[0] + '" data-projet="' + p.id + '">'
+      : (p.tags.length ? panneauTags(p) : '');
+    var entete = visuel ? '<div class="fr-card__header"><div class="fr-card__img">' + visuel + '</div></div>' : '';
+    var themes = p.themes.length ? '<ul class="fr-tags-group">' + p.themes.map(function (t) { return tag(t, 'fr-tag--sm'); }).join('') + '</ul>' : '';
+    var debut = themes ? '<div class="fr-card__start">' + themes + '</div>' : '';
+    var fin = p.porteur ? '<div class="fr-card__end"><p class="fr-card__detail">' + esc((LIB.porteur ? LIB.porteur + ' : ' : '') + p.porteur) + '</p></div>' : '';
+    return '<li><div class="fr-card fr-card--horizontal fr-enlarge-button"><div class="fr-card__body"><div class="fr-card__content">' +
       '<h3 class="fr-card__title"><button type="button" data-ouvrir="' + p.id + '" aria-haspopup="dialog">' + esc(p.titre || 'Projet sans titre') + '</button></h3>' +
-      (p.description ? '<p class="fr-card__desc">' + esc(p.description) + '</p>' : '') + tags +
-      (p.date ? '<div class="fr-card__end"><p class="fr-card__detail">Ajouté le ' + esc(Socle.formaterDate(p.date)) + '</p></div>' : '') +
-      '</div></div><div class="fr-card__header"><div class="fr-card__img">' + image + '</div>' +
-      (badge ? '<ul class="fr-badges-group"><li><p class="fr-badge fr-badge--sm fr-badge--no-icon">' + esc(badge) + '</p></li></ul>' : '') +
-      '</div></div></li>';
+      (p.sousTitre ? '<p class="fr-card__desc">' + esc(p.sousTitre) + '</p>' : '') + debut + fin +
+      '</div></div>' + entete + '</div></li>';
   }
 
   // ---------- filtrage et affichage ----------
-  function majBalises() {
-    var liste = Socle.listeBalises(projets), courante = etat.balise;
-    el.balise.innerHTML = '<option value="">Toutes les balises</option>' + liste.map(function (b) { return '<option>' + esc(b.nom) + '</option>'; }).join('');
-    if (!liste.some(function (b) { return b.nom === courante; })) etat.balise = '';
-    el.balise.value = etat.balise;
-    el.groupeBalise.hidden = !liste.length;
+  // Liste déroulante des thèmes. Chaque option indique le nombre de projets disponibles avec ce thème, compte tenu de la
+  // recherche en cours (« Accueil & relation usagers (8) »). Un thème sans projet disponible n'est plus proposé, sauf s'il est
+  // celui qui est choisi. Les options sont créées quand les données changent, leurs comptes se mettent à jour à chaque recherche.
+  function majThemes() {
+    var liste = Socle.listeThemes(projets), courant = etat.theme;
+    el.theme.innerHTML = '<option value="">' + esc(CFG.libelles.tousLesThemes) + '</option>' + liste.map(function (t) { return '<option value="' + esc(t.nom) + '">' + esc(t.nom) + '</option>'; }).join('');
+    if (!liste.some(function (t) { return t.nom === courant; })) etat.theme = '';
+    el.theme.value = etat.theme;
+    el.groupeTheme.hidden = !liste.length;
+    majComptesThemes();
+  }
+  function majComptesThemes() {
+    var disponibles = {};
+    Socle.listeThemes(Socle.filtrer(tri, { texte: etat.q }, true)).forEach(function (t) { disponibles[t.nom] = t.effectif; });
+    Array.prototype.forEach.call(el.theme.options, function (o) {
+      if (!o.value) return;
+      var n = disponibles[o.value] || 0;
+      o.textContent = o.value + ' (' + n + ')';
+      o.disabled = n === 0 && o.value !== etat.theme;
+    });
   }
 
   function executer() {
-    res = Socle.filtrer(tri, { texte: etat.q, balise: etat.balise }, true);
+    res = Socle.filtrer(tri, { texte: etat.q, theme: etat.theme }, true);
+    majComptesThemes();
     var pages = Math.max(1, Math.ceil(res.length / CFG.parPage));
     if (etat.page > pages) etat.page = pages;
     var tranche = res.slice((etat.page - 1) * CFG.parPage, etat.page * CFG.parPage);
-    var actif = etat.q.trim() || etat.balise;
 
-    el.compteur.innerHTML = '<strong>' + pluriel(res.length, 'projet') + '</strong> sur ' + nombre(projets.length) + ' · du plus récent au plus ancien';
-    el.reinit.hidden = !actif;
+    el.compteur.innerHTML = '<strong>' + pluriel(res.length, 'projet') + '</strong> sur ' + nombre(projets.length);
 
     if (!projets.length) {
       el.compteur.textContent = '';
       el.liste.innerHTML = '<div class="fr-alert fr-alert--info"><h3 class="fr-alert__title">Aucun projet pour le moment</h3><p>Les projets publiés apparaîtront ici.</p></div>';
     } else if (!res.length) {
-      el.liste.innerHTML = '<div class="fr-alert fr-alert--info"><h3 class="fr-alert__title">Aucun projet ne correspond à votre recherche.</h3><p>Vérifiez l’orthographe, essayez d’autres mots ou choisissez « Toutes les balises ».</p>' +
+      el.liste.innerHTML = '<div class="fr-alert fr-alert--info"><h3 class="fr-alert__title">Aucun projet ne correspond à votre recherche.</h3><p>Vérifiez l’orthographe, essayez d’autres mots' +
+        (el.groupeTheme.hidden ? '' : ' ou choisissez « ' + esc(CFG.libelles.tousLesThemes) + ' »') + '.</p>' +
         '<button type="button" class="fr-btn fr-btn--secondary fr-btn--sm" data-reinit2>Réinitialiser les filtres</button></div>';
     } else {
-      el.liste.innerHTML = '<ul class="fr-raw-list app-cartes">' + tranche.map(carte).join('') + '</ul>';
+      el.liste.innerHTML = '<ul class="app-cartes">' + tranche.map(carte).join('') + '</ul>';
       lierImages(el.liste, false);
     }
     dessinerPagination(pages);
@@ -190,8 +229,8 @@
   }
 
   function reinitialiser() {
-    etat = { q: '', balise: '', page: 1 };
-    el.q.value = ''; el.balise.value = '';
+    etat = { q: '', theme: '', page: 1 };
+    el.q.value = ''; el.theme.value = '';
     executer(); el.q.focus();
   }
 
@@ -209,16 +248,15 @@
   }
 
   function scene(p, m) {
-    if (!m.length) return '<div class="app-scene app-scene--vide" aria-hidden="true">' + pictogramme('pictures') + '</div>';
     var it = m[diapo], contenu;
     if (it.k === 'photo') {
-      contenu = '<img data-piece="' + it.id + '" alt="Photo ' + (diapo + 1) + ' sur ' + m.length + ' du projet « ' + esc(p.titre) + ' »">';
+      contenu = '<img src="' + VIDE + '" data-piece="' + it.id + '" alt="Illustration ' + (diapo + 1) + ' sur ' + m.length + ' du projet « ' + esc(p.titre) + ' »">';
     } else if (it.v.type === 'lien') {
       contenu = '<div class="app-video"><p>Cette vidéo est hébergée sur ' + esc(hote(it.v.url)) + '.</p><a class="fr-link" href="' + esc(it.v.url) + '" target="_blank" rel="noopener noreferrer" title="Ouvrir la vidéo ' + it.n + ' - nouvelle fenêtre">Ouvrir la vidéo ' + it.n + '</a></div>';
     } else if (sansClic(it.v)) {
       contenu = lecteurHTML(p, it, false);
     } else {
-      contenu = '<div class="app-video">' + pictogramme('video') +
+      contenu = '<div class="app-video">' +
         '<button type="button" class="fr-btn app-lecture" data-lire="' + diapo + '">' + ICONE.lecture + 'Lancer la vidéo' + (videosValides(p).length > 1 ? ' ' + it.n : '') + '</button>' +
         '<p>Le lecteur ' + esc(nomLecteur(it.v)) + ' se charge et démarre après votre clic</p></div>';
     }
@@ -228,26 +266,47 @@
         '<span class="app-diapo">' + (diapo + 1) + ' / ' + m.length + '</span>' : '') + '</div>';
   }
 
+  // Texte du projet : thèmes, titre, sous-titre, date, résumé, puis porteur, contact, documents, tags et autres champs.
+  function info(p) {
+    var lignes = [];
+    function ligne(label, html) { lignes.push('<div><dt>' + esc(label) + '</dt><dd>' + html + '</dd></div>'); }
+    if (p.porteur) ligne(LIB.porteur, esc(p.porteur));
+    if (p.contact) ligne(LIB.contact, esc(p.contact));
+    if (p.precisions.length) {
+      ligne(LIB.precisions, '<ul class="app-documents">' + p.precisions.map(function (id, i) {
+        return '<li><a class="fr-link" href="#" data-doc="' + id + '" target="_blank" rel="noopener noreferrer" title="Document ' + (i + 1) + ' - nouvelle fenêtre">Document ' + (i + 1) + '</a><span class="app-doc-info"></span></li>';
+      }).join('') + '</ul>');
+    }
+    if (p.tags.length) ligne(LIB.tags, '<ul class="fr-tags-group">' + p.tags.map(function (t) { return tag(t); }).join('') + '</ul>');
+    p.champs.forEach(function (c) { ligne(c.label, esc(c.valeur)); });
+    return (p.themes.length ? '<ul class="fr-tags-group">' + p.themes.map(function (t) { return tag(t); }).join('') + '</ul>' : '') +
+      '<h2 class="fr-h4" id="m-titre">' + esc(p.titre || 'Projet sans titre') + '</h2>' +
+      (p.sousTitre ? '<p class="app-soustitre">' + esc(p.sousTitre) + '</p>' : '') +
+      (p.resume ? '<p class="app-resume">' + esc(p.resume) + '</p>' : '') +
+      (lignes.length ? '<dl class="app-champs">' + lignes.join('') + '</dl>' : '');
+  }
+
+  // Boutons « précédent » et « suivant » et position du projet : mis à jour sans toucher à la galerie.
+  function majNavigation() {
+    el.prec.innerHTML = ICONE.gauche + '<span class="app-libelle">Projet précédent</span>';
+    el.suiv.innerHTML = '<span class="app-libelle">Projet suivant</span>' + ICONE.droite;
+    el.prec.disabled = cur === 0; el.suiv.disabled = cur === res.length - 1;
+    el.prec.setAttribute('aria-label', 'Projet précédent'); el.suiv.setAttribute('aria-label', 'Projet suivant');
+    el.pos.textContent = 'Projet ' + (cur + 1) + ' sur ' + res.length;
+  }
+
   function dessiner() {
     var p = res[cur];
     if (!p) { el.dlg.close(); return; }
     var m = medias(p), it = m[diapo];
     var lienVideo = (it && it.k === 'video' && it.v.type !== 'lien')
       ? '<p class="fr-text--sm app-lien-video"><a class="fr-link fr-link--sm" href="' + esc(it.v.url) + '" target="_blank" rel="noopener noreferrer" title="Ouvrir la vidéo ' + it.n + ' sur ' + esc(nomSite(it.v)) + ' - nouvelle fenêtre">Ouvrir la vidéo sur ' + esc(nomSite(it.v)) + '</a></p>' : '';
-    el.corps.innerHTML = '<div class="app-galerie">' + scene(p, m) + lienVideo + '</div>' +
-      '<div class="app-info">' +
-        (p.balises.length ? '<ul class="fr-tags-group">' + p.balises.map(function (b) { return '<li><p class="fr-tag">' + esc(b) + '</p></li>'; }).join('') + '</ul>' : '') +
-        '<h2 class="fr-h4" id="m-titre">' + esc(p.titre || 'Projet sans titre') + '</h2>' +
-        (p.date ? '<p class="fr-text--xs app-date">Ajouté le ' + esc(Socle.formaterDate(p.date)) + '</p>' : '') +
-        (p.description ? '<p class="app-desc">' + esc(p.description) + '</p>' : '') +
-        (p.champs.length ? '<dl class="app-champs">' + p.champs.map(function (c) { return '<div><dt>' + esc(c.label) + '</dt><dd>' + esc(c.valeur) + '</dd></div>'; }).join('') + '</dl>' : '') +
-      '</div>';
-    el.prec.innerHTML = ICONE.gauche + '<span class="app-libelle">Projet précédent</span>';
-    el.suiv.innerHTML = '<span class="app-libelle">Projet suivant</span>' + ICONE.droite;
-    el.prec.disabled = cur === 0; el.suiv.disabled = cur === res.length - 1;
-    el.prec.setAttribute('aria-label', 'Projet précédent'); el.suiv.setAttribute('aria-label', 'Projet suivant');
-    el.pos.textContent = 'Projet ' + (cur + 1) + ' sur ' + res.length;
+    // Sans média, le texte occupe seul la fenêtre : pas de cadre vide ni de pictogramme.
+    el.corps.className = 'app-dialog__corps' + (m.length ? '' : ' app-dialog__corps--texte');
+    el.corps.innerHTML = (m.length ? '<div class="app-galerie">' + scene(p, m) + lienVideo + '</div>' : '') + '<div class="app-info">' + info(p) + '</div>';
+    majNavigation();
     if ($('img[data-piece]', el.corps)) lierImages(el.corps, true);
+    chargerDocuments(el.corps);
     var sc = $('.app-scene', el.corps);
     if (sc) swipe(sc);
   }
@@ -291,7 +350,7 @@
   // ---------- événements ----------
   el.q.addEventListener('input', function () { clearTimeout(minuteur); minuteur = setTimeout(function () { etat.q = el.q.value; etat.page = 1; executer(); }, CFG.delaiSaisieMs); });
   $('#recherche').addEventListener('submit', function (e) { e.preventDefault(); clearTimeout(minuteur); etat.q = el.q.value; etat.page = 1; executer(); });
-  el.balise.addEventListener('change', function () { etat.balise = el.balise.value; etat.page = 1; executer(); });
+  el.theme.addEventListener('change', function () { etat.theme = el.theme.value; etat.page = 1; executer(); });
   el.reinit.addEventListener('click', reinitialiser);
 
   el.liste.addEventListener('click', function (e) {
@@ -309,7 +368,13 @@
   el.dlg.addEventListener('click', function (e) {
     if (e.target === el.dlg) { el.dlg.close(); return; }
     var pas = e.target.closest('[data-pas]'); if (pas) { aller(+pas.getAttribute('data-pas')); return; }
-    var l = e.target.closest('[data-lire]'); if (l) lire(l);
+    var l = e.target.closest('[data-lire]'); if (l) { lire(l); return; }
+    // Document joint : le jeton d'accès expire ; s'il a expiré (ou n'est pas encore arrivé), on en demande un neuf avant d'ouvrir.
+    var d = e.target.closest('a[data-doc]');
+    if (d && (d.getAttribute('href') === '#' || !acc.jeton || Date.now() >= acc.expire - CFG.margeJetonMs)) {
+      e.preventDefault();
+      acc.obtenir().then(function () { var u = acc.url(d.getAttribute('data-doc')); d.setAttribute('href', u); window.open(u, '_blank', 'noopener'); }, function () {});
+    }
   });
   el.dlg.addEventListener('keydown', function (e) {
     if (/^(INPUT|SELECT|TEXTAREA|SUMMARY|IFRAME|VIDEO)$/.test(e.target.tagName)) return;
@@ -324,18 +389,40 @@
   });
 
   // ---------- données ----------
+  // Grist envoie les données à chaque modification de la table, y compris celles faites par d'autres personnes pendant
+  // qu'un visiteur lit le widget. On ne redessine donc que ce qui a réellement changé : une vidéo en cours de lecture
+  // n'est pas coupée par la modification d'un autre projet, et le visiteur au clavier garde sa place.
+  var derniere = null;
   function recevoir(liste, info) {
-    var idOuvert = (el.dlg.open && res[cur]) ? res[cur].id : null;
-    // Le libellé du filtre est celui de la colonne des balises dans la table.
-    var colBalise = info && info.structure && info.structure.roles.balise;
-    if (colBalise) $('label[for="balise"]').textContent = colBalise.label;
+    var structure = info && info.structure ? info.structure : null;
+    var empreinte = JSON.stringify(liste) + (structure ? JSON.stringify(structure.colonnes) : '');
+    if (empreinte === derniere) return;
+    derniere = empreinte;
+
+    var ouvert = (el.dlg.open && res[cur]) ? res[cur] : null, avant = ouvert ? JSON.stringify(ouvert) : null;
+    var f = document.activeElement, lire = function (a) { return f && f.getAttribute ? f.getAttribute(a) : null; };
+    var focusProjet = lire('data-ouvrir'), focusPage = lire('data-page');
+
+    // Les libellés affichés sont ceux des colonnes de la table (« Thème », « Porteur », « Contact »…).
+    var roles = structure && structure.roles;
+    if (roles) {
+      var nom = function (c) { return c ? c.label : ''; };
+      LIB = { porteur: nom(roles.porteur), contact: nom(roles.contact), precisions: nom(roles.precisions), tags: nom(roles.tags) };
+      if (roles.theme) $('label[for="theme"]').textContent = roles.theme.label;
+    }
     projets = liste;
-    tri = Socle.trierParDate(projets);
-    majBalises();
+    tri = Socle.trierProjets(projets, CFG.tri);
+    majThemes();
     executer();
-    if (idOuvert !== null) {
-      cur = res.findIndex(function (p) { return p.id === idOuvert; });
-      if (cur < 0) el.dlg.close(); else dessiner();
+
+    if (focusProjet !== null) { var b = el.liste.querySelector('[data-ouvrir="' + focusProjet + '"]'); if (b) b.focus({ preventScroll: true }); }
+    else if (focusPage !== null) { var a = el.pagination.querySelector('[data-page="' + focusPage + '"]'); if (a) a.focus({ preventScroll: true }); }
+
+    if (ouvert) {
+      cur = res.findIndex(function (p) { return p.id === ouvert.id; });
+      if (cur < 0) el.dlg.close();
+      else if (JSON.stringify(res[cur]) !== avant) dessiner();   // le projet affiché a changé
+      else majNavigation();                                        // sinon : seulement sa position dans la liste
     }
   }
 

@@ -1,55 +1,73 @@
-/* Mise en page propre au widget « Projets » (maquette A).
-   Les composants (carte, recherche, liste déroulante, tag, badge, bouton, pagination, alerte)
-   viennent du DSFR, utilisé sans modification dans le dossier dsfr/. */
+/* Mise en page du widget « Projets » (maquette B : liste de cartes horizontales sur une colonne).
+   Les composants (carte, recherche, liste déroulante, étiquette, bouton, pagination, alerte) viennent du DSFR,
+   utilisé sans modification dans le dossier dsfr/. */
 
 html { font-family: Marianne, arial, sans-serif; }
 body { margin: 0; background: var(--background-default-grey); color: var(--text-default-grey); }
 [hidden] { display: none !important; }
 
-.app { max-width: 78rem; margin: 0 auto; padding: 1.5rem 1.5rem 3rem; }
-.app-titre { margin: 0 0 1.5rem; }
+.app { max-width: 60rem; margin: 0 auto; padding: 1.5rem 1.5rem 3rem; }
 
-/* bandeau de filtres */
-.app-barre { display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; align-items: end; padding-bottom: 1.5rem; border-bottom: 1px solid var(--border-default-grey); }
-.app-barre .fr-select-group { margin-bottom: 0; }
-.app-barre .fr-search-bar { margin: 0; }
-.app-barre:has(> .app-champ-balise[hidden]) { grid-template-columns: 1fr; }
-
-.app-statut { display: flex; justify-content: space-between; align-items: center; gap: 1rem; min-height: 3.5rem; margin: .5rem 0 1rem; }
+/* en-tête : titre à gauche, compteur à droite */
+.app-tete { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .5rem 1rem; margin-bottom: 1rem; }
+.app-titre { margin: 0; }
 .app-compteur { margin: 0; }
 .app-compteur strong { color: var(--text-title-grey); }
-.app-avis { margin-bottom: 1rem; }
-.app-avis .fr-alert { max-width: 40rem; }
 
-/* grille de cartes */
-.app-cartes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.5rem; margin: 0; padding: 0; }
-.app-cartes > li { display: flex; padding: 0; margin: 0; }
+/* bloc de filtres : recherche, thème et réinitialisation sur une ligne */
+.app-barre { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) auto; gap: 1rem; align-items: end; padding: 1.5rem; margin-bottom: 1.5rem; background: var(--background-alt-grey); }
+.app-barre .fr-select-group { margin-bottom: 0; }
+.app-barre .fr-search-bar { margin: 0; }
+.app-barre .fr-select { text-overflow: ellipsis; }
+.app-barre:has(> .app-champ-theme[hidden]) { grid-template-columns: minmax(0, 1fr) auto; }
+.app-avis { margin-bottom: 1rem; }
+.app-avis .fr-alert { max-width: 40rem; margin-bottom: 1rem; }
+
+/* liste de cartes horizontales */
+.app-cartes { display: flex; flex-direction: column; gap: 1rem; margin: 0; padding: 0; list-style: none; }
+.app-cartes > li { padding: 0; margin: 0; }
 .app-cartes .fr-card { width: 100%; }
 .fr-card .fr-card__title button { padding: 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
-/* Description limitée à 2 lignes ; flex: none empêche la carte (en colonne flexible) d'écraser le paragraphe. */
+/* sous-titre limité à 2 lignes ; flex: none empêche la carte (en colonne flexible) d'écraser le paragraphe */
 .fr-card .fr-card__desc { flex: 0 0 auto; max-height: 3rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.app-img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; background: var(--background-contrast-grey); }
-/* Vignette par défaut : fond bleu très clair et pictogramme officiel du DSFR. */
-.app-neutre { display: grid; place-items: center; width: 100%; aspect-ratio: 16 / 9; background: var(--background-alt-blue-france); }
-.app-pictogramme { width: 7rem; height: 7rem; }
+.app-cartes .fr-card__start { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem; }
+.app-cartes .fr-card__start .fr-tags-group { margin: 0; }
+.app-cartes .fr-card__start .fr-card__detail { margin: 0; }
+@media (min-width: 48em) {
+  .app-cartes .fr-card--horizontal .fr-card__header { flex: 0 0 15rem; width: 15rem; }
+}
+
+/* visuel de la carte : l'illustration, à défaut les tags du projet */
+.app-img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: var(--background-contrast-grey); }
+.app-tags { display: flex; align-items: center; width: 100%; height: 100%; min-height: 11.25rem; padding: 1rem; background: var(--background-alt-blue-france); }
+.app-tags__liste { display: flex; flex-direction: column; align-items: flex-start; gap: .5rem; margin: 0; padding: 0; list-style: none; }
+.app-tags__liste > li { padding: 0; margin: 0; }
+.app-neutre { width: 100%; aspect-ratio: 4 / 3; background: var(--background-contrast-grey); }
 .app-ico { width: 1rem; height: 1rem; fill: currentColor; flex: none; }
 .app-echec { margin: 0; padding: 1rem; text-align: center; font-size: .875rem; color: var(--text-mention-grey); }
 
 #pagination { margin-top: 3rem; }
 #pagination .fr-pagination__list { justify-content: center; }
 
-@media (max-width: 61.99em) { .app-cartes { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 61.99em) {
+  .app-barre { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .app-barre .app-champ-q { grid-column: 1 / -1; }
+  .app-barre .app-reinit { justify-self: start; }
+  .app-barre:has(> .app-champ-theme[hidden]) { grid-template-columns: minmax(0, 1fr); }
+}
 @media (max-width: 47.99em) {
   .app { padding: 1rem; }
-  .app-barre { grid-template-columns: 1fr; gap: 1rem; }
-  .app-cartes { grid-template-columns: minmax(0, 1fr); }
+  .app-barre { grid-template-columns: minmax(0, 1fr); padding: 1rem; }
+  .app-barre .app-champ-q { grid-column: auto; }
 }
 
 /* fenêtre de détail (boîte de dialogue native : focus piégé, fermeture par Échap) */
-.app-dialog { width: min(55rem, calc(100% - 2rem)); max-height: calc(100% - 2rem); padding: 0; border: 0; overflow: auto; background: var(--background-default-grey); color: var(--text-default-grey); }
+.app-dialog { width: min(65rem, calc(100% - 2rem)); max-height: calc(100% - 2rem); padding: 0; border: 0; overflow: auto; background: var(--background-default-grey); color: var(--text-default-grey); }
 .app-dialog::backdrop { background: rgba(22, 22, 22, .64); }
 .app-dialog__tete { display: flex; padding: 1rem 1rem 0; }
-.app-dialog__corps { padding: .5rem 2rem 1.5rem; }
+/* galerie à gauche (3/5) et texte à droite (2/5) ; texte seul quand le projet n'a aucun média */
+.app-dialog__corps { display: grid; grid-template-columns: 3fr 2fr; gap: 2rem; align-items: start; padding: .5rem 2rem 1.5rem; }
+.app-dialog__corps--texte { grid-template-columns: minmax(0, 1fr); max-width: 44rem; }
 .app-dialog__pied { position: sticky; bottom: 0; display: flex; align-items: center; justify-content: space-between; gap: .5rem; padding: 1rem 2rem; border-top: 1px solid var(--border-default-grey); background: var(--background-default-grey); }
 .app-dialog__pied .fr-btn { gap: .5rem; }
 .app-pos { font-size: .875rem; color: var(--text-mention-grey); }
@@ -59,8 +77,6 @@ body { margin: 0; background: var(--background-default-grey); color: var(--text-
 .app-scene > img, .app-scene > iframe, .app-scene > video, .app-scene > .app-video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
 .app-scene > img { display: block; object-fit: contain; }
 .app-scene > iframe, .app-scene > video { border: 0; background: #000; }
-/* Projet sans média : bandeau avec le pictogramme par défaut (au lieu d'une fenêtre sans visuel). */
-.app-scene--vide { aspect-ratio: auto; min-height: 11rem; background: var(--background-alt-blue-france); }
 
 .app-nav { position: absolute; top: 50%; transform: translateY(-50%); display: grid; place-items: center; width: 2.5rem; height: 2.5rem; border: 0; background: var(--background-default-grey); color: var(--text-action-high-blue-france); box-shadow: 0 0 0 1px var(--border-default-grey); cursor: pointer; z-index: 2; }
 .app-nav:hover { background: var(--background-open-blue-france); }
@@ -73,14 +89,22 @@ body { margin: 0; background: var(--background-default-grey); color: var(--text-
 .app-lecture { gap: .5rem; }
 .app-lecture .app-ico { width: 1.25rem; height: 1.25rem; }
 
-.app-info { margin-top: 1.5rem; }
-.app-info h2 { margin: 1rem 0 .25rem; }
-.app-date { margin: 0 0 1rem; color: var(--text-mention-grey); }
-.app-desc { margin: 0; white-space: pre-line; }
-.app-champs { display: grid; gap: .75rem; margin: 1.5rem 0 0; padding-top: 1rem; border-top: 1px solid var(--border-default-grey); }
+/* texte du projet */
+.app-info .fr-tags-group { margin: 0 0 .5rem; }
+.app-info h2 { margin: .25rem 0 .5rem; }
+.app-soustitre { margin: 0 0 .75rem; font-size: 1.125rem; line-height: 1.75rem; color: var(--text-title-grey); }
+.app-resume { margin: 0; white-space: pre-line; }
+.app-champs { display: grid; gap: .75rem; margin: 1.5rem 0 0; padding: 1rem 0 0; border-top: 1px solid var(--border-default-grey); }
 .app-champs dt { font-size: .75rem; line-height: 1.25rem; color: var(--text-mention-grey); }
-.app-champs dd { margin: 0; white-space: pre-line; }
+.app-champs dd { margin: 0; padding: 0; white-space: pre-line; }
+.app-champs .fr-tags-group { margin: 0; }
+.app-documents { margin: 0; padding: 0; list-style: none; white-space: normal; }
+.app-documents > li { padding: 0; margin: 0 0 .5rem; }
+.app-doc-info { margin-left: .5rem; font-size: .875rem; color: var(--text-mention-grey); }
 
+@media (max-width: 61.99em) {
+  .app-dialog__corps { grid-template-columns: minmax(0, 1fr); gap: 1rem; }
+}
 @media (max-width: 47.99em) {
   .app-dialog { width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; }
   .app-dialog[open] { display: flex; flex-direction: column; }

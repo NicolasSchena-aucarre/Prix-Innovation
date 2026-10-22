@@ -12,6 +12,10 @@
  *     onProjets: function (projets, info) { ... },   // appelé à chaque changement des données
  *     onErreur: function (message) { ... }           // structure de la table inexploitable
  *   });
+ *
+ * Le widget de gestion (js/gestion.js) n'est pas rattaché à la table des projets : il la désigne par son nom
+ * (réglage gestion.table) et la lit avec Socle.lireTable(), qui renvoie la structure, les rôles et les lignes brutes,
+ * y compris pour une table vide.
  */
 (function (global) {
   'use strict';
@@ -34,8 +38,65 @@
     if (typeof c.fuseauHoraire !== 'string' || !c.fuseauHoraire) pb.push('fuseauHoraire doit être un texte, par exemple Europe/Paris');
     ['youtube', 'vimeo', 'peertube'].forEach(function (k) { if (!c.lecteurs || typeof c.lecteurs[k] !== 'string' || c.lecteurs[k].indexOf('{id}') === -1) pb.push('lecteurs.' + k + ' doit être une adresse contenant {id}'); });
     ['delaiSaisieMs', 'margeImagesPx', 'margeJetonMs', 'seuilBalayagePx'].forEach(function (k) { if (!(c[k] >= 0)) pb.push(k + ' doit être un nombre positif ou nul'); });
+    var col = c.colonnes;
+    if (!col || typeof col !== 'object') pb.push('la section colonnes est absente');
+    else {
+      ['titre', 'sousTitre'].forEach(function (k) { if (typeof col[k] !== 'string' || !col[k].trim()) pb.push('colonnes.' + k + ' doit être le nom d’une colonne (obligatoire)'); });
+      FONCTIONS.forEach(function (f) { if (!f.obligatoire && typeof col[f.cle] !== 'string') pb.push('colonnes.' + f.cle + ' doit être un nom de colonne, ou \'\' pour ne pas l’utiliser'); });
+      if (!Array.isArray(col.autres) || col.autres.some(function (n) { return typeof n !== 'string' || !n.trim(); })) pb.push('colonnes.autres doit être une liste de noms de colonnes');
+    }
+    if (['recents', 'anciens', 'titre'].indexOf(c.tri) === -1) pb.push('tri doit valoir \'recents\', \'anciens\' ou \'titre\'');
+    if (typeof c.separateursTags !== 'string') pb.push('separateursTags doit être un texte (les caractères qui séparent les tags), ou \'\'');
+    if (!c.libelles || typeof c.libelles.tousLesThemes !== 'string' || !c.libelles.tousLesThemes.trim()) pb.push('libelles.tousLesThemes doit être un texte');
     if (pb.length) throw new Error('Réglages invalides dans js/config.js : ' + pb.join(' ; ') + '.');
   }
+
+  // Réglages du widget de gestion (section « gestion » de config.js) ; le widget de lecture n'en dépend pas.
+  var cfgGestionControlee = null;
+  function configGestion() {
+    var g = config().gestion;
+    if (!g || typeof g !== 'object') throw new Error('Réglages introuvables : la section « gestion » manque dans js/config.js.');
+    if (cfgGestionControlee === g) return g;
+    var pb = [], p = g.photos;
+    if (typeof g.table !== 'string' || !g.table.trim()) pb.push('gestion.table doit être le nom de la table des projets');
+    if (typeof g.numero !== 'string') pb.push('gestion.numero doit être le nom de la colonne du numéro, ou \'\' pour ne pas l’afficher');
+    ['titreObligatoire', 'sousTitreObligatoire', 'actualisationAuRetour'].forEach(function (k) {
+      if (typeof g[k] !== 'boolean') pb.push('gestion.' + k + ' doit valoir true ou false');
+    });
+    var d = g.documents;
+    if (!d || typeof d !== 'object') pb.push('gestion.documents doit être un groupe de réglages');
+    else {
+      if (!Array.isArray(d.formats) || !d.formats.length) pb.push('gestion.documents.formats doit être une liste non vide de types, par exemple application/pdf');
+      if (!(d.poidsMaxMo > 0)) pb.push('gestion.documents.poidsMaxMo doit être un nombre supérieur à 0');
+    }
+    if (!p || typeof p !== 'object') pb.push('gestion.photos doit être un groupe de réglages');
+    else {
+      if (!Array.isArray(p.formats) || !p.formats.length) pb.push('gestion.photos.formats doit être une liste non vide de types, par exemple image/jpeg');
+      if (!(p.poidsMaxSourceMo > 0)) pb.push('gestion.photos.poidsMaxSourceMo doit être un nombre supérieur à 0');
+      if (!(p.largeurMaxPx >= 100)) pb.push('gestion.photos.largeurMaxPx doit être un nombre supérieur ou égal à 100');
+      if (!(p.qualite > 0 && p.qualite <= 1)) pb.push('gestion.photos.qualite doit être un nombre supérieur à 0 et inférieur ou égal à 1');
+      if (['image/jpeg', 'image/webp'].indexOf(p.formatSortie) === -1) pb.push('gestion.photos.formatSortie doit valoir image/jpeg ou image/webp');
+    }
+    if (pb.length) throw new Error('Réglages invalides dans js/config.js : ' + pb.join(' ; ') + '.');
+    cfgGestionControlee = g;
+    return g;
+  }
+
+  // ---------- fonctions des colonnes ----------
+  // Chaque fonction se règle dans la section « colonnes » de js/config.js ; « types » : types de colonne Grist admis.
+  var FONCTIONS = [
+    { cle: 'titre', types: ['Text'], obligatoire: true },
+    { cle: 'sousTitre', types: ['Text'], obligatoire: true },
+    { cle: 'resume', types: ['Text'] },
+    { cle: 'porteur', types: ['Text', 'Choice', 'ChoiceList'] },
+    { cle: 'theme', types: ['ChoiceList'] },
+    { cle: 'tags', types: ['Text'] },
+    { cle: 'contact', types: ['Text'] },
+    { cle: 'precisions', types: ['Attachments'] },
+    { cle: 'illustration', types: ['Attachments'] },
+    { cle: 'videos', types: ['Text'] }
+  ];
+  var TYPES_FR = { Text: 'Texte', Int: 'Entier', Numeric: 'Nombre', Bool: 'Oui/non', Date: 'Date', DateTime: 'Date et heure', Choice: 'Choix', ChoiceList: 'Choix multiple', Attachments: 'Pièces jointes' };
 
   // ---------- outils sur le texte ----------
 
@@ -70,6 +131,14 @@
 
   function texte(v) {
     return (v == null || estCensure(v)) ? '' : String(v);
+  }
+
+  // Les tags sont saisis dans une colonne de texte : un par ligne, ou séparés par un des caractères de « separateursTags »
+  // (config.js). Espaces retirés, doublons écartés, ordre conservé.
+  function separerTags(v) {
+    var seps = String(config().separateursTags || '').replace(/[\]\\^-]/g, '\\$&'), re = new RegExp('[\\r\\n' + seps + ']+'), vus = {}, out = [];
+    texte(v).split(re).forEach(function (t) { t = t.trim(); if (t && !vus[t]) { vus[t] = true; out.push(t); } });
+    return out;
   }
 
   // Choix unique (texte), choix multiple (liste), pièces jointes (liste de numéros) : toujours un tableau.
@@ -130,10 +199,8 @@
   //   1. par les tables de métadonnées de Grist (_grist_Tables et _grist_Tables_column) ;
   //   2. à défaut, par l'interface web de Grist (avec le jeton d'accès) ;
   //   3. à défaut, en déduisant la nature de chaque colonne de la forme de ses valeurs (sans libellés).
-  // Puis il attribue un rôle à chaque colonne d'après son type, sans jamais regarder son nom :
-  //   pièces jointes → galerie ; première date → date et tri ; premier choix → balises et filtre ;
-  //   texte dont les valeurs sont des adresses de vidéos → vidéos ; première puis deuxième colonne de texte
-  //   renseignée → titre puis description ; toute autre colonne → champ affiché dans le détail, avec son libellé.
+  // Puis il associe chaque fonction (titre, sous-titre, résumé, thème…) à la colonne dont le nom est déclaré dans la
+  // section « colonnes » de js/config.js, et vérifie son type. Une colonne non déclarée n'est jamais utilisée.
 
   function baseType(t) { return String(t || '').split(':')[0]; }
   var TYPES_AFFICHABLES = ['Text', 'Int', 'Numeric', 'Bool', 'Date', 'DateTime', 'Choice', 'ChoiceList', 'Attachments'];
@@ -144,6 +211,23 @@
     if (c.formule) return 'colonne-formule ou colonne vide';
     if (TYPES_AFFICHABLES.indexOf(baseType(c.type)) === -1) return 'type non affichable (' + baseType(c.type) + ')';
     return null;
+  }
+
+  // Valeurs proposées par une colonne de choix : elles sont déclarées dans ses options (JSON, clé « choices »).
+  function choixDe(options) {
+    var o = options;
+    if (typeof o === 'string') { try { o = JSON.parse(o); } catch { return []; } }
+    return o && Array.isArray(o.choices) ? o.choices.map(String) : [];
+  }
+
+  // Une colonne telle que la lit le socle. « declencheur » : colonne de données dotée d'une formule de déclenchement
+  // (Grist la remplit lui-même, par exemple à la création de la ligne) : le widget de gestion ne l'écrit pas.
+  function colonne(id, label, type, estFormule, formule, options) {
+    return {
+      id: id, label: label || id, type: type, formule: !!estFormule,
+      declencheur: !estFormule && String(formule == null ? '' : formule).trim() !== '',
+      choix: choixDe(options)
+    };
   }
 
   // Un résultat de fetchTable est organisé par colonnes : on le transforme en lignes.
@@ -172,7 +256,7 @@
         if (!table) throw new Error('table introuvable dans les métadonnées');
         return { table: table.tableId, colonnes: cols.filter(function (c) { return c.parentId === table.id; })
           .sort(function (a, b) { return a.parentPos - b.parentPos; })
-          .map(function (c) { return { id: c.colId, label: c.label || c.colId, type: c.type, formule: !!c.isFormula }; }) };
+          .map(function (c) { return colonne(c.colId, c.label, c.type, c.isFormula, c.formula, c.widgetOptions); }) };
       });
     });
   }
@@ -187,7 +271,7 @@
     }).then(function (j) {
       return { table: idTable, colonnes: (j.columns || []).map(function (c) {
         var f = c.fields || {};
-        return { id: c.id, label: f.label || c.id, type: f.type, formule: !!f.isFormula };
+        return colonne(c.id, f.label, f.type, f.isFormula, f.formula, f.widgetOptions);
       }) };
     });
   }
@@ -207,7 +291,7 @@
         var nb = Object.keys(distinctes).length, moy = valeurs.reduce(function (n, v) { return n + String(v).length; }, 0) / valeurs.length;
         if (nb <= 30 && nb < valeurs.length && moy <= 30) type = 'Choice';
       }
-      return { id: k, label: k, type: type, formule: false };
+      return colonne(k, k, type, false, '', null);
     });
   }
 
@@ -229,51 +313,79 @@
     });
   }
 
-  // Une colonne de texte est une colonne de vidéos si au moins la moitié de ses lignes sont des adresses web et si
-  // l'une d'elles est celle d'une vidéo reconnue (un simple « site web » n'en est pas une). Cette tolérance évite
-  // qu'une faute de saisie dans une seule cellule fasse perdre toute la colonne.
-  function estColonneVideos(c, records) {
-    var lignes = [];
-    records.forEach(function (r) { texte(r[c.id]).split(/\r?\n/).forEach(function (l) { if (l.trim()) lignes.push(l.trim()); }); });
-    if (!lignes.length) return false;
-    var adresses = lignes.filter(function (l) { return /^https?:\/\//i.test(l); });
-    return adresses.length >= lignes.length / 2 &&
-      adresses.some(function (l) { return ['youtube', 'vimeo', 'peertube', 'direct'].indexOf(analyserVideos(l)[0].type) !== -1; });
+  // Structure d'une table désignée par son nom, sans avoir besoin de ses données (une table vide a une structure).
+  // Métadonnées de Grist, à défaut interface web. Pas de dernier recours par les valeurs : sans données, il ne
+  // saurait rien déduire, et une structure devinée ne doit pas servir à écrire.
+  function structureDe(idTable, acces) {
+    return structureMeta(idTable, []).then(function (r) { r.source = 'metadonnees'; return r; })
+      .catch(function () { return structureWeb(idTable, acces).then(function (r) { r.source = 'web'; return r; }); });
   }
 
-  // Attribue un rôle à chaque colonne retenue (voir le principe en tête de section).
-  function deduireRoles(structure, cles, records) {
-    var utiles = structure.colonnes.filter(function (c) { return cles.indexOf(c.id) !== -1 && !raisonEcartee(c); });
-    var roles = { titre: null, description: null, date: null, balise: null, medias: [], videos: [], champs: [] }, pris = {};
-    var textes = utiles.filter(function (c) { return baseType(c.type) === 'Text'; });
-    textes.forEach(function (c) { if (estColonneVideos(c, records)) { roles.videos.push(c); pris[c.id] = true; } });
-    textes.filter(function (c) {
-      return !pris[c.id] && records.some(function (r) { return texte(r[c.id]).trim() !== ''; });
-    }).slice(0, 2).forEach(function (c, i) { if (i === 0) roles.titre = c; else roles.description = c; pris[c.id] = true; });
-    utiles.forEach(function (c) {
-      var b = baseType(c.type);
-      if (pris[c.id]) return;
-      if (b === 'Attachments') { roles.medias.push(c); pris[c.id] = true; }
-      else if ((b === 'Date' || b === 'DateTime') && !roles.date) { roles.date = c; pris[c.id] = true; }
-      else if ((b === 'Choice' || b === 'ChoiceList') && !roles.balise) { roles.balise = c; pris[c.id] = true; }
+  // Clé de comparaison d'un nom de colonne : « Sous-titre », « sous_titre » et « SOUS TITRE » sont la même.
+  function cleNom(n) { return normaliser(n).replace(/[^a-z0-9]+/g, ''); }
+
+  function nomType(t) { var b = baseType(t); return TYPES_FR[b] || b; }
+
+  // Associe chaque fonction à sa colonne. Renvoie les rôles : { titre, sousTitre, resume, porteur, theme, tags, contact,
+  // precisions, illustration, date, videos : colonne ou null ; autres : liste de colonnes }.
+  // Si une colonne déclarée est introuvable, d'un type qui ne convient pas ou déclarée deux fois, lève une erreur qui
+  // les liste toutes, pour tout corriger en une fois.
+  // « gestion » (vrai pour le widget de gestion seulement) : lie aussi la colonne du numéro du projet, lecture seule.
+  function lierColonnes(structure, cles, gestion) {
+    var cfg = config().colonnes, pb = [], roles = { autres: [] }, prises = {};
+    var dispo = structure.colonnes.filter(function (c) { return c.id !== 'id' && c.id !== 'manualSort' && !/^gristHelper_/.test(c.id); });
+
+    function chercher(nom, reglage, types, formuleAdmise) {
+      var k = cleNom(nom), trouvees = dispo.filter(function (c) { return cleNom(c.label) === k || cleNom(c.id) === k; });
+      if (!trouvees.length) { pb.push('la colonne « ' + nom + ' » (réglage ' + reglage + ') est introuvable'); return null; }
+      if (trouvees.length > 1) { pb.push('plusieurs colonnes correspondent à « ' + nom + ' » (réglage ' + reglage + ') : ' + trouvees.map(function (c) { return '« ' + c.label + ' »'; }).join(', ')); return null; }
+      var c = trouvees[0];
+      if (cles.indexOf(c.id) === -1) { pb.push('la colonne « ' + c.label + ' » (réglage ' + reglage + ') n’est pas fournie par Grist'); return null; }
+      if (c.formule && !formuleAdmise) { pb.push('la colonne « ' + c.label + ' » (réglage ' + reglage + ') est une colonne à formule ou une colonne vide : elle ne peut pas être utilisée'); return null; }
+      if (types && types.indexOf(baseType(c.type)) === -1) {
+        pb.push('la colonne « ' + c.label + ' » (réglage ' + reglage + ') doit être de type ' + types.map(function (t) { return TYPES_FR[t]; }).join(' ou ') + ' (elle est de type ' + nomType(c.type) + ')');
+        return null;
+      }
+      if (TYPES_AFFICHABLES.indexOf(baseType(c.type)) === -1) { pb.push('la colonne « ' + c.label + ' » (réglage ' + reglage + ') est d’un type non pris en charge (' + nomType(c.type) + ')'); return null; }
+      if (prises[c.id]) { pb.push('la colonne « ' + c.label + ' » est déclarée deux fois (réglages ' + prises[c.id] + ' et ' + reglage + ')'); return null; }
+      prises[c.id] = reglage;
+      return c;
+    }
+
+    FONCTIONS.forEach(function (f) {
+      var nom = cfg[f.cle];
+      roles[f.cle] = nom && nom.trim() ? chercher(nom, 'colonnes.' + f.cle, f.types) : null;
     });
-    roles.champs = utiles.filter(function (c) { return !pris[c.id]; });
+    roles.numero = null;
+    if (gestion) {
+      var nomNumero = config().gestion.numero;
+      if (nomNumero && nomNumero.trim()) roles.numero = chercher(nomNumero, 'gestion.numero', ['Text', 'Int', 'Numeric'], true);   // jamais écrite : une colonne à formule convient aussi
+    }
+    cfg.autres.forEach(function (nom, i) { var c = chercher(nom, 'colonnes.autres[' + i + ']', null); if (c) roles.autres.push(c); });
+
+    if (pb.length) {
+      throw new Error('Les colonnes déclarées dans la section « colonnes » de js/config.js ne correspondent pas à la table « ' + structure.table + ' » : ' +
+        pb.join(' ; ') + '. Colonnes de la table : ' + dispo.map(function (c) { return c.label + ' (' + nomType(c.type) + ')'; }).join(', ') + '.');
+    }
     return roles;
   }
 
-  // Description lisible de la structure (pour la page de vérification) : rôle de chaque colonne.
+  function colonnesUtilisees(roles) {
+    return FONCTIONS.map(function (f) { return roles[f.cle]; }).filter(Boolean).concat(roles.autres, roles.numero || []);
+  }
+
+  // Description lisible de la structure (pour la page de vérification) : fonction de chaque colonne.
   function decrire(structure, roles, cles) {
+    var NOMS = { titre: 'titre', sousTitre: 'sous-titre', resume: 'résumé', porteur: 'porteur', theme: 'thème', tags: 'tags', contact: 'contact', precisions: 'précisions', illustration: 'illustration', videos: 'vidéos' };
     function role(c) {
+      var fonction = FONCTIONS.filter(function (f) { return roles[f.cle] && roles[f.cle].id === c.id; })[0];
+      if (fonction) return { role: NOMS[fonction.cle] };
+      if (roles.numero && roles.numero.id === c.id) return { role: 'numéro (gestion seulement)' };
+      if (roles.autres.some(function (m) { return m.id === c.id; })) return { role: 'autre champ du détail' };
       var raison = raisonEcartee(c);
-      if (raison) return { role: 'ignorée', raison: raison };
-      if (cles.indexOf(c.id) === -1) return { role: 'ignorée', raison: 'non fournie par Grist (colonne non affichée dans le panneau du widget)' };
-      if (roles.titre && roles.titre.id === c.id) return { role: 'titre' };
-      if (roles.description && roles.description.id === c.id) return { role: 'description' };
-      if (roles.date && roles.date.id === c.id) return { role: 'date' };
-      if (roles.balise && roles.balise.id === c.id) return { role: 'balises' };
-      if (roles.medias.some(function (m) { return m.id === c.id; })) return { role: 'photos' };
-      if (roles.videos.some(function (m) { return m.id === c.id; })) return { role: 'vidéos' };
-      return { role: 'champ du détail' };
+      if (raison) return { role: 'non utilisée', raison: raison };
+      if (cles.indexOf(c.id) === -1) return { role: 'non utilisée', raison: 'non fournie par Grist' };
+      return { role: 'non utilisée', raison: 'non déclarée dans js/config.js' };
     }
     return { table: structure.table, source: structure.source, roles: roles,
       colonnes: structure.colonnes.map(function (c) { var r = role(c); return { id: c.id, label: c.label, type: c.type, role: r.role, raison: r.raison || '' }; }) };
@@ -293,54 +405,63 @@
   }
 
   function construire(records, roles) {
-    var utilisees = [].concat(roles.titre || [], roles.description || [], roles.date || [], roles.balise || [], roles.medias, roles.videos, roles.champs);
+    var utilisees = colonnesUtilisees(roles);
+    function val(r, c) { return c ? texte(r[c.id]).trim() : ''; }
     return records.map(function (r) {
       var censures = utilisees.filter(function (c) { return estCensure(r[c.id]); }).length;
-      var titre = roles.titre ? texte(r[roles.titre.id]) : '', description = roles.description ? texte(r[roles.description.id]) : '';
-      var photos = [], videos = [], champs = [];
-      roles.medias.forEach(function (c) { photos = photos.concat(pieces(r[c.id])); });
-      roles.videos.forEach(function (c) { videos = videos.concat(analyserVideos(r[c.id])); });
-      roles.champs.forEach(function (c) { var v = formaterChamp(r[c.id], c); if (v) champs.push({ label: c.label, valeur: v }); });
+      var titre = val(r, roles.titre), sousTitre = val(r, roles.sousTitre), resume = val(r, roles.resume);
+      var champs = [];
+      roles.autres.forEach(function (c) { var v = formaterChamp(r[c.id], c); if (v) champs.push({ label: c.label, valeur: v }); });
       return {
         id: r.id,
         titre: titre,
-        description: description,
-        balises: roles.balise ? liste(r[roles.balise.id]).map(String) : [],
-        date: roles.date ? versDate(r[roles.date.id]) : null,
-        photos: photos,
-        videos: videos,
+        sousTitre: sousTitre,
+        resume: resume,
+        porteur: roles.porteur ? formaterChamp(r[roles.porteur.id], roles.porteur) : '',
+        themes: roles.theme ? liste(r[roles.theme.id]).map(String) : [],
+        tags: roles.tags ? separerTags(r[roles.tags.id]) : [],
+        contact: roles.contact ? texte(r[roles.contact.id]).trim() : '',
+        numero: roles.numero ? texte(r[roles.numero.id]).trim() : '',   // gestion seulement : le widget public ne le lit jamais
+        precisions: roles.precisions ? pieces(r[roles.precisions.id]) : [],
+        illustrations: roles.illustration ? pieces(r[roles.illustration.id]) : [],
+        videos: roles.videos ? analyserVideos(r[roles.videos.id]) : [],
         champs: champs,
         censures: censures,
-        recherche: normaliser(titre + ' ' + description)   // calculé une seule fois
+        recherche: normaliser(titre + ' ' + sousTitre + ' ' + resume)   // calculé une seule fois
       };
     });
   }
 
-  // Du plus récent au plus ancien ; les projets sans date à la fin.
-  function trierParDate(projets) {
+  // Classement des projets. 'recents' : le dernier créé en premier (numéro de ligne décroissant) ; 'anciens' : l'inverse ;
+  // 'titre' : ordre alphabétique des titres (à la française, sans tenir compte de la casse ni des accents).
+  function trierProjets(projets, mode) {
+    var m = mode || 'recents';
     return projets.slice().sort(function (a, b) {
-      var ta = a.date ? a.date.getTime() : -Infinity, tb = b.date ? b.date.getTime() : -Infinity;
-      if (ta !== tb) return tb - ta;
-      return b.id - a.id;
+      if (m === 'titre') {
+        var d = a.titre.localeCompare(b.titre, 'fr', { sensitivity: 'base', numeric: true });
+        if (d) return d;
+        return b.id - a.id;
+      }
+      return m === 'anciens' ? a.id - b.id : b.id - a.id;
     });
   }
 
-  // Chaque mot saisi doit se trouver dans le titre ou la description, dans n’importe quel ordre ;
-  // la balise choisie (si elle l’est) se cumule avec la recherche.
+  // Chaque mot saisi doit se trouver dans le titre, le sous-titre ou le résumé, dans n’importe quel ordre ;
+  // le thème choisi (s’il l’est) se cumule avec la recherche.
   function filtrer(projets, criteres, dejaTrie) {
     criteres = criteres || {};
     var mots = normaliser(criteres.texte || '').split(/\s+/).filter(Boolean);
-    return (dejaTrie ? projets : trierParDate(projets)).filter(function (p) {
-      if (criteres.balise && p.balises.indexOf(criteres.balise) === -1) return false;
+    return (dejaTrie ? projets : trierProjets(projets, config().tri)).filter(function (p) {
+      if (criteres.theme && p.themes.indexOf(criteres.theme) === -1) return false;
       return mots.every(function (m) { return p.recherche.indexOf(m) !== -1; });
     });
   }
 
-  function listeBalises(projets) {
+  function listeThemes(projets) {
     var vues = {};
-    projets.forEach(function (p) { p.balises.forEach(function (b) { vues[b] = (vues[b] || 0) + 1; }); });
+    projets.forEach(function (p) { p.themes.forEach(function (t) { vues[t] = (vues[t] || 0) + 1; }); });
     return Object.keys(vues).sort(function (a, b) { return a.localeCompare(b, 'fr'); })
-      .map(function (b) { return { nom: b, effectif: vues[b] }; });
+      .map(function (t) { return { nom: t, effectif: vues[t] }; });
   }
 
   // ---------- accès aux pièces jointes ----------
@@ -361,14 +482,15 @@
     return String(info.baseUrl).replace(/\/$/, '');
   }
 
-  // Grist délivre un jeton temporaire en lecture seule ; on le renouvelle avant son expiration.
-  function AccesPieces() { this.jeton = null; this.base = null; this.validite = 0; this.expire = 0; this._attente = null; }
+  // Grist délivre un jeton temporaire (en lecture seule, sauf option ecriture) ; on le renouvelle avant son expiration.
+  // Option { ecriture: true } : jeton qui permet aussi d'envoyer des fichiers (widget de gestion). Par défaut : lecture seule.
+  function AccesPieces(opts) { this.ecriture = !!(opts && opts.ecriture); this.jeton = null; this.base = null; this.validite = 0; this.expire = 0; this._attente = null; }
 
   AccesPieces.prototype.obtenir = function () {
     var self = this;
     if (self.jeton && Date.now() < self.expire - config().margeJetonMs) return Promise.resolve(self);
     if (!self._attente) {
-      self._attente = global.grist.docApi.getAccessToken({ readOnly: true }).then(function (r) {
+      self._attente = global.grist.docApi.getAccessToken({ readOnly: !self.ecriture }).then(function (r) {
         self.jeton = r.token;
         self.base = baseApi(r);
         self.validite = r.ttlMsecs || 0;
@@ -380,7 +502,22 @@
     return self._attente;
   };
   AccesPieces.prototype.url = function (id) { return this.base + '/attachments/' + id + '/download?auth=' + encodeURIComponent(this.jeton); };
+  AccesPieces.prototype.urlDepot = function () { return this.base + '/attachments'; };
   AccesPieces.prototype.urlMeta = function (id) { return this.base + '/attachments/' + id + '?auth=' + encodeURIComponent(this.jeton); };
+
+  // ---------- lecture d'une table désignée par son nom (widget de gestion) ----------
+  // Renvoie { structure, roles, brut, projets, description } : la structure (colonnes, types, choix), la colonne de chaque
+  // fonction (voir lierColonnes), les lignes telles que Grist les fournit (pour pré-remplir un formulaire) et les projets
+  // mis en forme. Fonctionne sur une table vide.
+  function lireTable(idTable, acces) {
+    return structureDe(idTable, acces).then(function (st) {
+      return global.grist.docApi.fetchTable(idTable).then(function (t) {
+        var brut = lignesDe(t), cles = Object.keys(t || {}).filter(function (k) { return k !== 'id'; });
+        var roles = lierColonnes(st, cles, true);
+        return { structure: st, roles: roles, brut: brut, projets: construire(brut, roles), description: decrire(st, roles, cles) };
+      });
+    });
+  }
 
   // ---------- connexion à Grist ----------
   // Aucune colonne n'est déclarée à Grist : le panneau du widget n'affiche donc aucune association à faire.
@@ -398,8 +535,7 @@
       var pret = cache.signature === signature ? Promise.resolve(cache.structure)
         : resoudreStructure(records, cles, jetons).then(function (st) { cache = { signature: signature, structure: st }; return st; });
       return pret.then(function (st) {
-        var roles = deduireRoles(st, cles, records);
-        if (!roles.titre) throw new Error('Aucune colonne de texte renseignée : le widget ne peut pas déterminer le titre des projets.');
+        var roles = lierColonnes(st, cles);
         if (opts.onProjets) opts.onProjets(construire(records, roles), { structure: decrire(st, roles, cles), brut: records });
       });
     }
@@ -413,8 +549,12 @@
 
   // Interface publique : uniquement ce qu'utilisent le widget et les pages de diagnostic.
   global.Socle = {
-    config: config, echapper: echapper, formaterDate: formaterDate,
-    trierParDate: trierParDate, filtrer: filtrer, listeBalises: listeBalises,
-    AccesPieces: AccesPieces, demarrer: demarrer
+    config: config, echapper: echapper,
+    trierProjets: trierProjets, filtrer: filtrer, listeThemes: listeThemes,
+    AccesPieces: AccesPieces, demarrer: demarrer,
+    // Widget de gestion
+    configGestion: configGestion, lireTable: lireTable, structureDe: structureDe,
+    baseType: baseType, texte: texte, liste: liste, separerTags: separerTags, pieces: pieces, versDate: versDate,
+    normaliser: normaliser, analyserVideos: analyserVideos
   };
 })(window);

@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gestion des projets</title>
+<!-- Système de Design de l'État (fichiers officiels non modifiés) -->
+<link rel="stylesheet" href="dsfr/core/core.min.css">
+<link rel="stylesheet" href="dsfr/component/form/form.min.css">
+<link rel="stylesheet" href="dsfr/component/input/input.min.css">
+<link rel="stylesheet" href="dsfr/component/select/select.min.css">
+<link rel="stylesheet" href="dsfr/component/checkbox/checkbox.min.css">
+<link rel="stylesheet" href="dsfr/component/upload/upload.min.css">
+<link rel="stylesheet" href="dsfr/component/button/button.min.css">
+<link rel="stylesheet" href="dsfr/component/link/link.min.css">
+<link rel="stylesheet" href="dsfr/component/badge/badge.min.css">
+<link rel="stylesheet" href="dsfr/component/tag/tag.min.css">
+<link rel="stylesheet" href="dsfr/component/table/table.min.css">
+<link rel="stylesheet" href="dsfr/component/alert/alert.min.css">
+<link rel="stylesheet" href="dsfr/component/skiplink/skiplink.min.css">
+<link rel="stylesheet" href="css/gestion.css">
+</head>
+<body>
+
+<div class="fr-skiplinks">
+  <nav aria-label="Accès rapide" class="fr-container">
+    <ul class="fr-skiplinks__list">
+      <li><a class="fr-link" href="#liste">Liste des projets</a></li>
+    </ul>
+  </nav>
+</div>
+
+<main id="g-w" class="gest">
+  <h2 class="fr-h3 gest-titre">Gestion des projets</h2>
+
+  <div class="gest-barre">
+    <p class="gest-compteur" id="g-compteur" role="status">Chargement des projets…</p>
+    <p class="fr-text--sm gest-lecture" id="g-lecture"></p>
+    <button type="button" class="fr-btn fr-btn--secondary fr-btn--sm" id="g-actualiser" disabled>Actualiser la liste</button>
+    <button type="button" class="fr-btn fr-btn--sm" id="g-ajouter" disabled>Ajouter un projet</button>
+  </div>
+
+  <div class="gest-avis" id="g-avis" aria-live="polite"></div>
+
+  <div id="liste" tabindex="-1"></div>
+</main>
+
+<dialog id="g-form" class="gest-dialog gest-dialog--form" aria-labelledby="g-form-titre">
+  <form id="g-formulaire" class="gest-form" novalidate>
+    <div class="gest-dialog__tete">
+      <h3 class="fr-h4" id="g-form-titre">Projet</h3>
+      <button type="button" class="fr-btn--close fr-btn" id="g-form-fermer" title="Fermer la fenêtre">Fermer</button>
+    </div>
+    <div class="gest-dialog__corps">
+      <div id="g-form-avis"></div>
+      <div id="g-form-champs"></div>
+    </div>
+    <div class="gest-dialog__pied">
+      <button type="button" class="fr-btn fr-btn--secondary" id="g-form-annuler">Annuler</button>
+      <button type="submit" class="fr-btn" id="g-form-enregistrer">Enregistrer</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="g-confirm" class="gest-dialog gest-dialog--petit" aria-labelledby="g-confirm-titre" aria-describedby="g-confirm-texte">
+  <div class="gest-dialog__corps">
+    <h3 class="fr-h4" id="g-confirm-titre">Confirmation</h3>
+    <p id="g-confirm-texte">Confirmez-vous cette action ?</p>
+  </div>
+  <div class="gest-dialog__pied">
+    <button type="button" class="fr-btn fr-btn--secondary" id="g-confirm-non">Annuler</button>
+    <button type="button" class="fr-btn" id="g-confirm-oui">Confirmer</button>
+  </div>
+</dialog>
+
+<!-- Interface de programmation de Grist.
+     Pour éviter tout appel à un domaine extérieur, remplacez cette adresse par celle de votre instance :
+     https://votre-instance-grist/grist-plugin-api.js
+     Ce widget s'exécute avec les droits du propriétaire du document : à faire avant toute mise en production. -->
+<script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+<script src="js/config.js"></script>
+<script src="js/socle.js"></script>
+<script src="js/champs.js"></script>
+<script src="js/photos.js"></script>
+<script src="js/gestion.js"></script>
+</body>
+</html>

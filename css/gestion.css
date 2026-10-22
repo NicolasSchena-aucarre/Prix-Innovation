@@ -1,0 +1,102 @@
+/* Mise en page propre au widget de gestion.
+   Les composants (tableau, bouton, étiquette, alerte, lien) viennent du DSFR, utilisé sans modification dans dsfr/. */
+
+/* BASE */
+html { font-family: Marianne, arial, sans-serif; }
+body { margin: 0; background: var(--background-default-grey); color: var(--text-default-grey); }
+[hidden] { display: none !important; }
+
+.gest { max-width: 78rem; margin: 0 auto; padding: 1.5rem 1.5rem 3rem; }
+.gest-titre { margin: 0 0 1.5rem; }
+
+/* BARRE D'ÉTAT */
+.gest-barre { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-default-grey); }
+.gest-compteur { margin: 0; font-weight: 700; color: var(--text-title-grey); }
+.gest-lecture { margin: 0 auto 0 0; color: var(--text-mention-grey); }
+
+/* AVIS */
+.gest-avis { margin-top: 1rem; }
+.gest-avis .fr-alert { max-width: 48rem; margin-bottom: 1rem; }
+
+/* LISTE */
+.gest-vide { margin: 2rem 0; }
+.gest .fr-table { margin-top: 1.5rem; }
+.gest-sans-titre { color: var(--text-mention-grey); }
+.gest-balises { display: flex; flex-wrap: wrap; gap: .25rem; margin: 0; padding: 0; list-style: none; }
+.gest-balises > li { padding: 0; margin: 0; }
+.gest-nombre { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* NUMÉRO DU PROJET (lecture seule) */
+.gest-numero { margin: 0 0 1.5rem; padding: .75rem 1rem; background: var(--background-alt-grey); }
+.gest-numero__label { margin-right: .5rem; color: var(--text-mention-grey); }
+.gest-numero__attente { color: var(--text-mention-grey); }
+
+/* TAGS DU FORMULAIRE */
+.gest-form .gest-tags { margin-inline: 0; }
+.gest-form .gest-tags .fr-fieldset__legend { padding-inline: 0; }
+.gest-tags__liste { margin: 0 0 1rem; padding: 0; }
+.gest-tags__liste > li { padding: 0; }
+.gest-tags__saisie { display: flex; align-items: flex-end; gap: 1rem; }
+.gest-tags__saisie .fr-input-group { flex: 1 1 auto; margin-bottom: 0; }
+.gest-tags__saisie .fr-btn { flex: none; }
+
+/* LISTE : les titres et les thèmes longs passent à la ligne au lieu d'élargir le tableau */
+.gest .fr-table th[scope="row"] { min-width: 12rem; }
+.gest-balises .fr-tag { max-width: 100%; }
+
+/* ACTIONS DE LA LISTE */
+.gest-actions { display: flex; justify-content: flex-end; gap: .5rem; white-space: nowrap; }
+.gest .fr-table th.gest-colonne-actions { text-align: right; }
+
+/* BOÎTES DE DIALOGUE (boîte native : focus piégé, fermeture par Échap) */
+.gest-dialog { width: min(42rem, calc(100% - 2rem)); max-height: calc(100% - 2rem); padding: 0; border: 0; overflow: auto; background: var(--background-default-grey); color: var(--text-default-grey); }
+.gest-dialog::backdrop { background: rgba(22, 22, 22, .64); }
+.gest-dialog--petit { width: min(32rem, calc(100% - 2rem)); }
+/* Le pied de fenêtre reste affiché en bas : on réserve sa place pour qu'un champ qui reçoit le focus ne passe jamais derrière. */
+.gest-dialog--form { scroll-padding-bottom: 6rem; }
+.gest-dialog__tete { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding: 1.5rem 1rem 0 2rem; }
+.gest-dialog__tete h3 { margin: 0; }
+.gest-dialog__corps { padding: 1.5rem 2rem; }
+.gest-dialog--petit .gest-dialog__corps { padding-bottom: 1rem; }
+.gest-dialog--petit h3 { margin: 0 0 1rem; }
+.gest-dialog__corps p:last-child { margin-bottom: 0; }
+.gest-dialog__pied { position: sticky; bottom: 0; display: flex; justify-content: flex-end; gap: .5rem; padding: 1rem 2rem; border-top: 1px solid var(--border-default-grey); background: var(--background-default-grey); }
+.gest-form { display: block; }
+.gest-form .fr-input-group, .gest-form .fr-select-group, .gest-form .fr-fieldset, .gest-form .fr-checkbox-group { margin-bottom: 1.5rem; }
+.gest-form .fr-fieldset { padding: 0; border: 0; }
+.gest-form .fr-fieldset .fr-checkbox-group { margin-bottom: 0; }
+.gest-form .fr-fieldset__element { margin-bottom: .5rem; }
+.gest-form textarea.fr-input { resize: vertical; }
+.gest-dialog .fr-alert { margin-bottom: 1.5rem; }
+.gest-conflit { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1rem; }
+
+/* PHOTOS DU FORMULAIRE */
+/* Chaque colonne de pièces jointes (illustration, précisions) est un cadre à part, titré du nom de sa colonne. */
+.gest-form .fr-fieldset.gest-photos { margin-inline: 0; padding: 1rem; border: 1px solid var(--border-default-grey); }
+.gest-form .gest-photos .fr-fieldset__legend { padding-inline: 0; font-weight: 700; font-size: 1.125rem; line-height: 1.75rem; }
+.gest-form .gest-photos .fr-fieldset__legend .fr-hint-text { font-weight: 400; }
+.gest-photos__liste { display: grid; gap: .75rem; margin: 0 0 1.5rem; padding: 0; list-style: none; }
+.gest-photos__liste > li { margin: 0; padding: 0; }
+.gest-photo { display: flex; align-items: center; gap: 1rem; padding: .5rem; border: 1px solid var(--border-default-grey); }
+.gest-photo__vignette { flex: none; display: grid; place-items: center; width: 6rem; height: 4.5rem; overflow: hidden; background: var(--background-alt-grey); color: var(--text-mention-grey); font-size: .75rem; line-height: 1rem; text-align: center; }
+.gest-photo__vignette img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.gest-photo__corps { flex: 1 1 auto; min-width: 0; }
+.gest-photo__nom { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin: 0 0 .5rem; font-weight: 700; }
+.gest-photo__actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+.gest-photo__fichier { margin: 0 0 .5rem; font-size: .875rem; color: var(--text-mention-grey); overflow-wrap: anywhere; }
+.gest-photos__vide { color: var(--text-mention-grey); }
+.gest-photos__etat { min-height: 1.5rem; margin-top: .5rem; }
+.gest-photos__etat p { margin: 0; }
+
+/* MOBILE */
+@media (max-width: 47.99em) {
+  .gest { padding: 1rem; }
+  .gest-lecture { margin-right: 0; flex-basis: 100%; }
+  .gest-tags__saisie { flex-wrap: wrap; align-items: stretch; }
+  .gest-dialog--form { width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; }
+  .gest-dialog--form[open] { display: flex; flex-direction: column; }
+  .gest-dialog--form .gest-form { display: flex; flex-direction: column; flex: 1 0 auto; }
+  .gest-dialog--form .gest-dialog__corps { flex: 1 0 auto; padding: 1rem; }
+  .gest-dialog__tete { padding: 1rem 1rem 0; }
+  .gest-dialog__pied { padding: .75rem 1rem; }
+}
