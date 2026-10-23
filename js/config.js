@@ -72,7 +72,7 @@ window.CONFIG_PROJETS = {
     peertube: '{origine}/videos/embed/{id}'
   },
 
-  // Widget de gestion (ajout, modification et suppression de projets). Ces réglages ne concernent pas le widget
+  // Widget de  (ajout, modification et suppression de projets). Ces réglages ne concernent pas le widget
   // de lecture. Aucun nom de colonne ici : les colonnes se déduisent de la structure de la table.
   gestion: {
     // Nom de la table des projets. Le widget de gestion est rattaché à une autre table (réservée au propriétaire,
@@ -86,7 +86,7 @@ window.CONFIG_PROJETS = {
 
     // Un projet sans titre (ou sans sous-titre) est refusé à l'enregistrement.
     titreObligatoire: true,
-    sousTitreObligatoire: true,
+    sousTitreObligatoire: false,
 
     // Recharger les projets quand l'onglet redevient visible. Les modifications faites ailleurs ne sont pas poussées
     // vers ce widget (il n'est pas rattaché à la table des projets) : le bouton « Actualiser » reste toujours disponible.
