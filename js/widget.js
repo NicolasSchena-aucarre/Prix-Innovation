@@ -270,6 +270,7 @@
   function info(p) {
     var lignes = [];
     function ligne(label, html) { lignes.push('<div><dt>' + esc(label) + '</dt><dd>' + html + '</dd></div>'); }
+    p.champs.forEach(function (c) { ligne(c.label, esc(c.valeur)); });   // colonnes ajoutées : juste après le résumé
     if (p.porteur) ligne(LIB.porteur, esc(p.porteur));
     if (p.contact) ligne(LIB.contact, esc(p.contact));
     if (p.precisions.length) {
@@ -278,7 +279,6 @@
       }).join('') + '</ul>');
     }
     if (p.tags.length) ligne(LIB.tags, '<ul class="fr-tags-group">' + p.tags.map(function (t) { return tag(t); }).join('') + '</ul>');
-    p.champs.forEach(function (c) { ligne(c.label, esc(c.valeur)); });
     return (p.themes.length ? '<ul class="fr-tags-group">' + p.themes.map(function (t) { return tag(t); }).join('') + '</ul>' : '') +
       '<h2 class="fr-h4" id="m-titre">' + esc(p.titre || 'Projet sans titre') + '</h2>' +
       (p.sousTitre ? '<p class="app-soustitre">' + esc(p.sousTitre) + '</p>' : '') +
@@ -425,6 +425,22 @@
       else majNavigation();                                        // sinon : seulement sa position dans la liste
     }
   }
+
+  // En-tête : logo, titre et texte d'introduction, lus dans la table de réglages de Grist. Le logo vient de la table ; à défaut,
+  // du fichier réglé dans config.js.
+  function afficherLogo(src, alt) {
+    var logo = document.createElement('img');
+    logo.className = 'app-logo'; logo.alt = alt; logo.src = src;
+    logo.addEventListener('error', function () { logo.remove(); });   // un logo illisible ne laisse pas de cadre cassé
+    $('#tete-id').insertBefore(logo, $('#tete-id').firstChild);
+  }
+  Socle.lireEntete().then(function (h) {
+    $('#titre').textContent = h.titre;
+    document.title = h.titre;
+    if (h.texte) { $('#intro').textContent = h.texte; $('#intro').hidden = false; }
+    if (h.logo !== null) acc.obtenir().then(function () { afficherLogo(acc.url(h.logo), h.logoAlt); }, function () {});
+    else if (CFG.entete.logo) afficherLogo(CFG.entete.logo, CFG.entete.logoAlt);
+  });
 
   Socle.demarrer({
     onProjets: recevoir,

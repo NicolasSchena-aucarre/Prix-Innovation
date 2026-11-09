@@ -43,7 +43,15 @@
     else {
       ['titre', 'sousTitre'].forEach(function (k) { if (typeof col[k] !== 'string' || !col[k].trim()) pb.push('colonnes.' + k + ' doit être le nom d’une colonne (obligatoire)'); });
       FONCTIONS.forEach(function (f) { if (!f.obligatoire && typeof col[f.cle] !== 'string') pb.push('colonnes.' + f.cle + ' doit être un nom de colonne, ou \'\' pour ne pas l’utiliser'); });
+      if (typeof col.prefixeAutres !== 'string') pb.push('colonnes.prefixeAutres doit être un texte (le préfixe des colonnes ajoutées), ou \'\'');
       if (!Array.isArray(col.autres) || col.autres.some(function (n) { return typeof n !== 'string' || !n.trim(); })) pb.push('colonnes.autres doit être une liste de noms de colonnes');
+    }
+    var en = c.entete;
+    if (!en || typeof en !== 'object') pb.push('la section entete est absente');
+    else {
+      ['logo', 'logoAlt', 'table', 'colonneTitre', 'colonneTexte', 'colonneLogo', 'colonneLogoAlt'].forEach(function (k) { if (typeof en[k] !== 'string') pb.push('entete.' + k + ' doit être un texte'); });
+      if (typeof en.titreParDefaut !== 'string' || !en.titreParDefaut.trim()) pb.push('entete.titreParDefaut doit être un texte non vide');
+      if (typeof en.logo === 'string' && en.logo.trim() && !String(en.logoAlt || '').trim()) pb.push('entete.logoAlt est obligatoire quand un logo est indiqué (texte alternatif)');
     }
     if (['recents', 'anciens', 'titre'].indexOf(c.tri) === -1) pb.push('tri doit valoir \'recents\', \'anciens\' ou \'titre\'');
     if (typeof c.separateursTags !== 'string') pb.push('separateursTags doit être un texte (les caractères qui séparent les tags), ou \'\'');
@@ -237,26 +245,53 @@
     return out;
   }
 
+  // Ordre des colonnes dans la vue « tableau » de la table (celle que l'on réorganise dans Grist) : rang de chaque colonne, ou null
+  // si aucune vue ne la montre. Réordonner des colonnes dans une vue ne change pas l'ordre « brut » des colonnes de la table.
+  // Parmi les vues de la table, on retient la plus complète (à égalité, la plus ancienne), hors données brutes et fiche.
+  function ordreDeVue(table, tabs, sections, champs) {
+    var exclues = {};
+    tabs.forEach(function (t) { if (t.rawViewSectionRef) exclues[t.rawViewSectionRef] = 1; if (t.recordCardViewSectionRef) exclues[t.recordCardViewSectionRef] = 1; });
+    var meilleure = null;
+    sections.filter(function (s) { return s.tableRef === table.id && s.parentKey === 'record' && !exclues[s.id]; }).sort(function (a, b) { return a.id - b.id; }).forEach(function (s) {
+      var f = champs.filter(function (c) { return c.parentId === s.id; });
+      if (!meilleure || f.length > meilleure.length) meilleure = f;
+    });
+    if (!meilleure) return null;
+    var rang = {};
+    meilleure.sort(function (a, b) { return a.parentPos - b.parentPos; }).forEach(function (f, i) { rang[f.colRef] = i; });
+    return rang;
+  }
+
   function structureMeta(idTable, cles) {
     var grist = global.grist;
+    function lire(nom) { return grist.docApi.fetchTable(nom).then(function (t) { return lignesDe(t); }, function () { return []; }); }   // métadonnées facultatives : leur absence ne bloque rien
     return grist.docApi.fetchTable('_grist_Tables').then(function (t1) {
       return grist.docApi.fetchTable('_grist_Tables_column').then(function (t2) {
-        var tabs = lignesDe(t1), cols = lignesDe(t2), table = null;
-        if (idTable) table = tabs.filter(function (t) { return t.tableId === idTable; })[0];
-        else {
-          // Sans identifiant : la table qui contient toutes les colonnes reçues (la plus étroite s'il y en a plusieurs).
-          var cand = tabs.filter(function (t) {
-            var ids = cols.filter(function (c) { return c.parentId === t.id; }).map(function (c) { return c.colId; });
-            return cles.every(function (k) { return ids.indexOf(k) !== -1; });
-          }).sort(function (a, b) {
-            return cols.filter(function (c) { return c.parentId === a.id; }).length - cols.filter(function (c) { return c.parentId === b.id; }).length;
+        return Promise.all([lire('_grist_Views_section'), lire('_grist_Views_section_field')]).then(function (vues) {
+          var tabs = lignesDe(t1), cols = lignesDe(t2), table = null;
+          if (idTable) table = tabs.filter(function (t) { return t.tableId === idTable; })[0];
+          else {
+            // Sans identifiant : la table qui contient toutes les colonnes reçues (la plus étroite s'il y en a plusieurs).
+            var cand = tabs.filter(function (t) {
+              var ids = cols.filter(function (c) { return c.parentId === t.id; }).map(function (c) { return c.colId; });
+              return cles.every(function (k) { return ids.indexOf(k) !== -1; });
+            }).sort(function (a, b) {
+              return cols.filter(function (c) { return c.parentId === a.id; }).length - cols.filter(function (c) { return c.parentId === b.id; }).length;
+            });
+            table = cand[0];
+          }
+          if (!table) throw new Error('table introuvable dans les métadonnées');
+          var liste = cols.filter(function (c) { return c.parentId === table.id; }).sort(function (a, b) { return a.parentPos - b.parentPos; });
+          var rang = ordreDeVue(table, tabs, vues[0], vues[1]);
+          if (rang) liste.sort(function (a, b) {   // colonnes de la vue d'abord, dans l'ordre de la vue ; les autres ensuite, dans l'ordre brut
+            var ra = rang[a.id], rb = rang[b.id];
+            if (ra === undefined && rb === undefined) return a.parentPos - b.parentPos;
+            if (ra === undefined) return 1;
+            if (rb === undefined) return -1;
+            return ra - rb;
           });
-          table = cand[0];
-        }
-        if (!table) throw new Error('table introuvable dans les métadonnées');
-        return { table: table.tableId, colonnes: cols.filter(function (c) { return c.parentId === table.id; })
-          .sort(function (a, b) { return a.parentPos - b.parentPos; })
-          .map(function (c) { return colonne(c.colId, c.label, c.type, c.isFormula, c.formula, c.widgetOptions); }) };
+          return { table: table.tableId, colonnes: liste.map(function (c) { return colonne(c.colId, c.label, c.type, c.isFormula, c.formula, c.widgetOptions); }) };
+        });
       });
     });
   }
@@ -361,8 +396,22 @@
       var nomNumero = config().gestion.numero;
       if (nomNumero && nomNumero.trim()) roles.numero = chercher(nomNumero, 'gestion.numero', ['Text', 'Int', 'Numeric'], true);   // jamais écrite : une colonne à formule convient aussi
     }
+    // Colonnes de texte repérées par leur préfixe : reprises sans réglage supplémentaire, sous leur nom sans le préfixe.
+    var pre = (cfg.prefixeAutres || '').trim();
+    var extra = [];
+    if (pre) {
+      dispo.forEach(function (c) {
+        var l = String(c.label || '').trim();
+        if (l.indexOf(pre) !== 0 || prises[c.id] || c.formule || baseType(c.type) !== 'Text' || cles.indexOf(c.id) === -1) return;
+        var nom = l.slice(pre.length).trim();
+        if (!nom) return;
+        prises[c.id] = 'colonnes.prefixeAutres';
+        extra.push(Object.assign({}, c, { label: nom }));
+      });
+    }
     cfg.autres.forEach(function (nom, i) { var c = chercher(nom, 'colonnes.autres[' + i + ']', null); if (c) roles.autres.push(c); });
 
+    roles.autres = roles.autres.concat(extra);
     if (pb.length) {
       throw new Error('Les colonnes déclarées dans la section « colonnes » de js/config.js ne correspondent pas à la table « ' + structure.table + ' » : ' +
         pb.join(' ; ') + '. Colonnes de la table : ' + dispo.map(function (c) { return c.label + ' (' + nomType(c.type) + ')'; }).join(', ') + '.');
@@ -464,6 +513,27 @@
       .map(function (t) { return { nom: t, effectif: vues[t] }; });
   }
 
+  // ---------- en-tête de la page publique ----------
+  // Titre et texte d'introduction, lus dans la première valeur renseignée de la table de réglages (section « entete »).
+  // Table absente, illisible ou vide : le titre par défaut, sans texte. Rien ne bloque jamais l'affichage de la liste.
+  function lireEntete() {
+    var e = config().entete, defaut = { titre: e.titreParDefaut, texte: '', logo: null, logoAlt: '' };
+    if (!e.table) return Promise.resolve(defaut);
+    return global.grist.docApi.fetchTable(e.table).then(function (t) {
+      function premiere(nom) {
+        var k = cleNom(nom), col = nom ? Object.keys(t).filter(function (c) { return c !== 'id' && cleNom(c) === k; })[0] : null;
+        return col ? (t[col] || []).filter(function (x) { return texte(x).trim() !== ''; })[0] : undefined;
+      }
+      function premierTexte(nom) { var v = premiere(nom); return v === undefined ? '' : texte(v).trim(); }
+      var cl = e.colonneLogo ? Object.keys(t).filter(function (c) { return c !== 'id' && cleNom(c) === cleNom(e.colonneLogo); })[0] : null;
+      var piecesLogo = cl ? (t[cl] || []).map(function (x) { return pieces(x)[0]; }).filter(function (x) { return x !== undefined; }) : [];
+      return {
+        titre: premierTexte(e.colonneTitre) || e.titreParDefaut, texte: premierTexte(e.colonneTexte),
+        logo: piecesLogo.length ? piecesLogo[0] : null, logoAlt: premierTexte(e.colonneLogoAlt)
+      };
+    }, function () { return defaut; });
+  }
+
   // ---------- accès aux pièces jointes ----------
   // getAccessToken renvoie une adresse construite avec l'identifiant COURT du document, alors que le jeton encode
   // l'identifiant canonique que le serveur vérifie. On remplace l'un par l'autre quand ils diffèrent ; sans effet
@@ -555,6 +625,6 @@
     // Widget de gestion
     configGestion: configGestion, lireTable: lireTable, structureDe: structureDe,
     baseType: baseType, texte: texte, liste: liste, separerTags: separerTags, pieces: pieces, versDate: versDate,
-    normaliser: normaliser, analyserVideos: analyserVideos
+    normaliser: normaliser, analyserVideos: analyserVideos, lireEntete: lireEntete
   };
 })(window);

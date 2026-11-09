@@ -41,7 +41,26 @@ window.CONFIG_PROJETS = {
     precisions: 'Précisions',      // pièces jointes · documents (PDF…) proposés en lien dans la fenêtre de détail
     illustration: 'Illustration',  // pièces jointes · image(s) : la première illustre la carte
     videos: 'Videos',              // texte · une adresse de vidéo par ligne
-    autres: []                     // noms d'autres colonnes à afficher dans le détail, avec leur libellé
+    autres: [],                    // noms d'autres colonnes à afficher dans le détail, avec leur libellé
+
+    // Colonnes de texte ajoutables sans toucher à ce fichier : toute colonne de type Texte dont le nom commence par ce préfixe
+    // est reprise automatiquement, publiquement, dans le détail (juste après le résumé) et dans le formulaire de gestion,
+    // sous son nom sans le préfixe (« + Zone géographique » s'affiche « Zone géographique »). '' pour désactiver.
+    // Attention : une colonne préfixée est publique. Ne préfixez jamais une colonne interne.
+    prefixeAutres: '+'
+  },
+
+  // En-tête de la page publique : logo, titre et texte d'introduction. Le titre et le texte se modifient dans Grist, dans la
+  // première ligne de la table « table » (le propriétaire du document les change sans toucher aux fichiers) ; le logo est un fichier.
+  entete: {
+    colonneLogo: 'Logo',                     // colonne de pièces jointes de la table de réglages : le logo se change dans Grist (PNG conseillé, léger)
+    colonneLogoAlt: 'Texte alternatif du logo',   // colonne de texte : ce que dit le logo (ex. « Préfecture de région … »)
+    logo: '',                                // logo de secours, en fichier (ex. 'img/logo-prefecture.png') : utilisé seulement si la table n'en fournit pas ; '' = aucun
+    logoAlt: '',                             // texte alternatif du logo de secours (obligatoire si ce logo est indiqué)
+    table: 'Reglages',                       // table Grist du titre et du texte ; '' = rien à lire dans Grist
+    colonneTitre: 'Titre de la page',        // colonne du titre (texte)
+    colonneTexte: 'Texte d’introduction',    // colonne du texte d'introduction (texte)
+    titreParDefaut: 'Projets'                // titre tant que la table est absente ou vide
   },
 
   // Caractères qui séparent les tags dans la colonne de texte des tags, en plus du retour à la ligne.
@@ -72,7 +91,7 @@ window.CONFIG_PROJETS = {
     peertube: '{origine}/videos/embed/{id}'
   },
 
-  // Widget de  (ajout, modification et suppression de projets). Ces réglages ne concernent pas le widget
+  // Widget de gestion (ajout, modification et suppression de projets). Ces réglages ne concernent pas le widget
   // de lecture. Aucun nom de colonne ici : les colonnes se déduisent de la structure de la table.
   gestion: {
     // Nom de la table des projets. Le widget de gestion est rattaché à une autre table (réservée au propriétaire,
@@ -84,7 +103,7 @@ window.CONFIG_PROJETS = {
     // Laisser '' pour ne pas l'afficher.
     numero: 'N°',
 
-    // Un projet sans titre (ou sans sous-titre) est refusé à l'enregistrement.
+    // Un projet sans titre est refusé à l'enregistrement ; le sous-titre peut être exigé aussi (true) ou laissé facultatif (false).
     titreObligatoire: true,
     sousTitreObligatoire: false,
 

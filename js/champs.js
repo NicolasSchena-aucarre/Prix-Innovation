@@ -78,7 +78,7 @@
 
   // ---------- champs ----------
   // Liste ordonnée des champs du formulaire. L'ordre est celui des fonctions (titre, sous-titre, résumé, porteur, thème, tags,
-  // contact, précisions, illustration, vidéos, puis les colonnes « autres » dans l'ordre du réglage) : il ne dépend pas de la
+  // contact, précisions, illustration, vidéos ; les colonnes « autres » et préfixées viennent juste après le résumé) : il ne dépend pas de la
   // place des colonnes dans la table.
   var ORDRE = ['titre', 'sousTitre', 'resume', 'porteur', 'theme', 'tags', 'contact', 'precisions', 'illustration', 'videos'];
 
@@ -106,8 +106,10 @@
         choix: c.choix, fuseau: type === 'date-heure' ? fuseauDe(c) : null
       });
     }
-    ORDRE.forEach(function (k) { ajouter(k, roles[k]); });
-    roles.autres.forEach(function (c) { ajouter('autre', c); });
+    ORDRE.forEach(function (k) {
+      ajouter(k, roles[k]);
+      if (k === 'resume') roles.autres.forEach(function (c) { ajouter('autre', c); });   // colonnes ajoutées : juste après le résumé
+    });
     return specs;
   }
 

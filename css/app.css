@@ -9,8 +9,12 @@ body { margin: 0; background: var(--background-default-grey); color: var(--text-
 .app { max-width: 60rem; margin: 0 auto; padding: 1.5rem 1.5rem 3rem; }
 
 /* en-tête : titre à gauche, compteur à droite */
-.app-tete { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .5rem 1rem; margin-bottom: 1rem; }
+.app-tete { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: .5rem 1.5rem; margin-bottom: 1rem; }
+.app-tete__id { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem 1.5rem; min-width: 0; }
+.app-tete__texte { min-width: 0; max-width: 42rem; }
+.app-logo { display: block; width: auto; max-width: 12rem; max-height: 5rem; }
 .app-titre { margin: 0; }
+.app-intro { margin: .5rem 0 0; white-space: pre-line; }
 .app-compteur { margin: 0; }
 .app-compteur strong { color: var(--text-title-grey); }
 

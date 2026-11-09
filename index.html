@@ -33,7 +33,13 @@
 
 <main id="w" class="app">
   <div class="app-tete">
-    <h2 class="fr-h3 app-titre">Projets</h2>
+    <div class="app-tete__id" id="tete-id">
+      <!-- Le logo (réglage entete.logo) est inséré ici par le script. Titre et texte viennent de la table de réglages de Grist. -->
+      <div class="app-tete__texte">
+        <h2 class="fr-h3 app-titre" id="titre">Projets</h2>
+        <p class="app-intro" id="intro" hidden></p>
+      </div>
+    </div>
     <p class="fr-text--sm app-compteur" id="compteur" aria-live="polite">Chargement des projets…</p>
   </div>
 
